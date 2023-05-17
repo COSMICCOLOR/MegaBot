@@ -1,1 +1,2 @@
 print('Проверка')
+print('dfsadgfhgjf')
