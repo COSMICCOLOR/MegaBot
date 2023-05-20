@@ -88,7 +88,8 @@ with con:
 clients = "INSERT OR IGNORE INTO Clients (name, phone_number, delivery_adress) values(?, ?, ?)"
 # INSERT OR IGNORE - модификатор для уникальных значений
 with con:
-    con.execute(clients, ["Артем Наумов", "+375297777777", "ул.Пушкинская д.53"])
+    con.execute(clients, ["Артем Наумов", "+375297777777", "ул.Пушкинская д.52"])
+    con.execute(clients, ["Артем Наумов", "+3752338345", "ул.Пушкинская д.53"])
 
 
 
