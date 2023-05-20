@@ -18,7 +18,7 @@ with con:
             name TEXT,
             phone_number TEXT,
             delivery_adress TEXT,
-            UNIQUE (phone_client),
+            UNIQUE (name),
         );
     """)
 
