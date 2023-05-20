@@ -13,106 +13,80 @@ con = sl.connect('restaurant1.db')
 
 with con:
     con.execute("""
-        CREATE TABLE IF NOT EXISTS Staff (
+        CREATE TABLE IF NOT EXISTS Clients (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-            last_name TEXT,
-            first_name TEXT,
-            middle_name TEXT,
-            birthday DATETIME,
+            name TEXT,
             phone_number TEXT,
-            position TEXT,
-            position_id INTEGER,
-            FOREIGN KEY (position_id) REFERENCES Positions (id),
-            UNIQUE(phone_number)
+            delivery_adress TEXT,
+            UNIQUE (phone_client),
         );
     """)
 
     con.execute("""
-            CREATE TABLE IF NOT EXISTS Positions (
+            CREATE TABLE IF NOT EXISTS Dish (
                 id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                 name TEXT,
-                salary INTEGER,
-                office INTEGER
+                description TEXT,
+                photo TEXT,
+                price FLOAT,
+                time  DATETIME,
+                weight FLOAT,
+                unit TEXT,
+                is_stop BOOLEAN,
+                count INTEGER,
+                FOREIGN KEY (category_id) REFERENCES CategoryDish (id),
             );
         """)
 
     con.execute("""
-            CREATE TABLE IF NOT EXISTS Services (
+            CREATE TABLE IF NOT EXISTS Orders (
                 id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                service_name TEXT,
-                position TEXT,
-                price TEXT,
+                FOREIGN KEY (client_id) REFERENCES Clients (id),
+                FOREIGN KEY (dish_id) REFERENCES Dish (id),
+                FOREIGN KEY (cart_id) REFERENCES ShoppingCart (id),
                 date DATETIME,
-                position_id INTEGER,
-                FOREIGN KEY (position_id) REFERENCES Positions (id)
             );
         """)
 
     con.execute("""
-            CREATE TABLE IF NOT EXISTS Clients (
+            CREATE TABLE IF NOT EXISTS ShoppingCart (
                 id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                last_name TEXT,
-                first_name TEXT,
-                middle_name TEXT,
-                birthday DATETIME,
-                phone_number TEXT,
-                file BINARY,
-                UNIQUE(phone_number)
-            );
+                FOREIGN KEY (client_id) REFERENCES Clients (id),
+                FOREIGN KEY (dish_id) REFERENCES Dish (id),
+                total_price FLOAT,   
+            )
         """)
 
     con.execute("""
-                CREATE TABLE IF NOT EXISTS Orders (
+                CREATE TABLE IF NOT EXISTS CategoryDish (
                     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                    client_id INTEGER,
-                    service_id INTEGER,
-                    staff_id INTEGER,
-                    service_start DATETIME,
-                    service_end DATETIME,
-                    FOREIGN KEY (client_id) REFERENCES Clients (id),
-                    FOREIGN KEY (service_id) REFERENCES Services (id),
-                    FOREIGN KEY (staff_id) REFERENCES Staff (id)
-                );
+                    name TEXT,
+                    description TEXT,
+                    is_stop BOOLEAN,
+                )
+            """)
+
+    con.execute("""
+                CREATE TABLE IF NOT EXISTS BotAdmins (
+                id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                telegram_id INTEGER,
+                phone_number INTEGER,
+                position TEXT,
+                first_name TEXT,
+                last_name TEXT,
+                UNIQUE (phone_number),
+                )
             """)
 
 
-sql_insert = "INSERT OR IGNORE INTO Staff (last_name, first_name, middle_name, birthday, phone_number, position, position_id) values(?, ?, ?, ?, ?, ?, ?)"
+clients = "INSERT OR IGNORE INTO Staff (name, phone_number, delivery_adress) values(?, ?, ?)"
 # INSERT OR IGNORE - модификатор для уникальных значений
 with con:
-    con.execute(sql_insert, ["фамилия", "имя", "отчество", '2005-01-13', "+375297777777", "терапевт", 1])
-    # executemany - для двумерного
-    con.execute(sql_insert, ["фамилия2", "имя2", "отчество2", '2005-01-14', "+375297777778", "стоматолог", 2])
+    con.execute(clients, ["Артем Наумов", "+375297777777", "ул.Пушкинская д.53"])
 
-sql_insert = "INSERT OR IGNORE INTO Positions (name, salary, office) values(?, ?, ?)"
-# INSERT OR IGNORE - модификатор для уникальных значений
-with con:
-    con.execute(sql_insert, ["терапевт", 1000, 10])
-    # executemany - для двумерного
-    con.execute(sql_insert, ["стоматолог", 2000, 11])
 
-sql_insert = "INSERT OR IGNORE INTO Services (service_name, position, price, date, position_id) values(?, ?, ?, ?, ?)"
-# INSERT OR IGNORE - модификатор для уникальных значений
-with con:
-    con.execute(sql_insert, ["консультация", "терапевт", 50, '2023-03-31', 1])
-    # executemany - для двумерного
-    con.execute(sql_insert, ["лечение", "стоматолог", 100, '2023-03-14', 2])
-
-sql_insert = "INSERT OR IGNORE INTO Clients (last_name, first_name, middle_name, birthday, phone_number, file) values(?, ?, ?, ?, ?, ?)"
-# INSERT OR IGNORE - модификатор для уникальных значений
-with con:
-    con.execute(sql_insert, ["клиент1", "имя", "отчество", '1955-01-13', "+375297777755", "JSON"])
-    # executemany - для двумерного
-    con.execute(sql_insert, ["клиент2", "имя2", "отчество2", '2000-01-14', "+375297777744", "JSON"])
-
-sql_insert = "INSERT OR IGNORE INTO Orders (client_id, service_id, staff_id, service_start, service_end) values(?, ?, ?, ?, ?)"
-# INSERT OR IGNORE - модификатор для уникальных значений
-with con:
-    con.execute(sql_insert, [1, 1, 1, '2023-03-31 10:00:00', "2022-12-05 11:00:00"])
-    # executemany - для двумерного
-    con.execute(sql_insert, [2, 2, 2, '2023-03-31 11:00:00', "2023-03-31 12:00:00"])
 
 with con:
-    data = con.execute("SELECT * FROM Staff")
-    print(data)
+    data = con.execute("SELECT * FROM Clients")
     print(data.fetchall())
     # fetchone
