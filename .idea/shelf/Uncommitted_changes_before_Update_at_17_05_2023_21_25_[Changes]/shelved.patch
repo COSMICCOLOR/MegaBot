@@ -1,0 +1,15 @@
+Index: misha.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>print(\"Hello World\")\r\nprint(\"hello hello from KG\")\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/misha.py b/misha.py
+--- a/misha.py	(revision fd743b0511e5c304d9a06e6b87a3cd284eab4712)
++++ b/misha.py	(date 1684347768529)
+@@ -1,2 +1,2 @@
+ print("Hello World")
+-print("hello hello from KG")
++print("hello hello")
+\ No newline at end of file

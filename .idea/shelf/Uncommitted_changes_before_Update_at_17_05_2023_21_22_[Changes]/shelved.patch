@@ -1,0 +1,32 @@
+Index: misha.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>print(\"Hello World\")\r\nprint(\"hello hello\")
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/misha.py b/misha.py
+--- a/misha.py	(revision a9553231d00046a123a18438e076e87fc081f8e9)
++++ b/misha.py	(date 1684347721275)
+@@ -1,2 +1,4 @@
+ print("Hello World")
+-print("hello hello")
+\ No newline at end of file
++print("hello hello")
++
++
+Index: lesha.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>print('Hello')
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/lesha.py b/lesha.py
+--- a/lesha.py	(revision a9553231d00046a123a18438e076e87fc081f8e9)
++++ b/lesha.py	(date 1684347446459)
+@@ -1,1 +1,1 @@
+-print('Hello')
+\ No newline at end of file
++print('Hello all')
+\ No newline at end of file
