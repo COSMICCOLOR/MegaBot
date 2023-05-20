@@ -25,6 +25,7 @@ Main_inline_keyb.add(InlineKeyboardButton("Мои заказы", callback_data="
 Main_inline_keyb.add(InlineKeyboardButton("О нас", callback_data="menu:txt5"))
 Main_inline_keyb.add(InlineKeyboardButton("Профиль пользователя", callback_data="menu:txt6"))
 
+
 @bot.message_handler(content_types=['text'])
 def start(message):
     if message.text.lower() == '/start':
