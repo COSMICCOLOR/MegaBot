@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2d4344d5-b7b1-4eef-80e1-2c6d974dbd51" name="Changes" comment="change 4">
-      <change beforePath="$PROJECT_DIR$/DATABASE/DBrestraurant.py" beforeDir="false" afterPath="$PROJECT_DIR$/DATABASE/DBrestraurant.py" afterDir="false" />
-    </list>
+    <list default="true" id="2d4344d5-b7b1-4eef-80e1-2c6d974dbd51" name="Changes" comment="change 4" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -126,7 +124,21 @@
       <option name="project" value="LOCAL" />
       <updated>1684607512146</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="change 4">
+      <created>1684607610799</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1684607610799</updated>
+    </task>
+    <task id="LOCAL-00007" summary="change 4">
+      <created>1684607614471</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1684607614471</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
