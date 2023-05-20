@@ -14,7 +14,7 @@ import uuid
 token = '6112420224:AAFd0gDtUiAC2qqWo4osq82D6qyGH07c_UY'
 bot = telebot.TeleBot(token)
 
-
+print()
 
 # Создаем клавиатуру и кнопки для главного меню USER-панели
 Main_inline_keyb = InlineKeyboardMarkup()
