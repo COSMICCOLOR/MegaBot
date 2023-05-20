@@ -1,2 +1,1 @@
 print('Проверка')
-print('dfsadgfhgjf')
