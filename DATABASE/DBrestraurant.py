@@ -97,6 +97,9 @@ with con:
                 );
             """)
 
+    con.execute("""
+                ALTER TABLE Dish ADD COLUMN subcategory_id INTEGER REFERENCES SubCategory (id);
+    """)
 
 # clients = "INSERT OR IGNORE INTO Clients (name, phone_number, delivery_adress) values(?, ?, ?)"
 # # INSERT OR IGNORE - модификатор для уникальных значений
