@@ -57,6 +57,11 @@ def query_handler(call):
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Category_inline_keyb)
     if call.data.split(':')[1] == "b1":
         bot.send_message(call.message.chat.id, "Что Вас интересует?", reply_markup=Main_inline_keyb)
+    if call.data.split(':')[1] == "txt1":
+        Category_inline_keyb = InlineKeyboardMarkup()
+        [Category_inline_keyb.add(InlineKeyboardButton(info, callback_data=f"s1:{info}")) for info in column_names]
+        Category_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
+        bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Category_inline_keyb)
 
 print("Ready")
 bot.infinity_polling(none_stop=True, interval=0)
