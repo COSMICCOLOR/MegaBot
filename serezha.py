@@ -65,6 +65,7 @@ def query_handler(call):
     bot.answer_callback_query(callback_query_id=call.id,)
     if call.data.split(':')[1] == "txt1":
         Category_inline_keyb = InlineKeyboardMarkup()
+        Category_inline_keyb.add('Вернуться в главное меню')
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=createbutton(Category_inline_keyb,column_names))
     if call.data.split(':')[1] == "b1":
         bot.send_message(call.message.chat.id, "Что Вас интересует?", reply_markup=Main_inline_keyb)
