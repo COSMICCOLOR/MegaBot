@@ -60,6 +60,17 @@ with conn:
 # print(dish_names)
 # print(dish_dict)
 
+with conn:
+    data = conn.execute("SELECT * FROM Reviews")
+    print(data.fetchall())
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT * FROM Reviews")
+    data_feedback = cursor.fetchall()  # fetchone
+    feedback = [i[1] for i in conn.execute(f"SELECT * FROM Reviews")]
+    cursor.execute("SELECT * FROM Clients WHERE id = 4")
+    gg = cursor.fetchall()
+    print(gg)
+
 # Создаем клавиатуру и кнопки для главного меню USER-панели
 Main_inline_keyb = InlineKeyboardMarkup()
 Main_inline_keyb.add(InlineKeyboardButton("Меню ресторана", callback_data="menu:txt1"))
@@ -90,7 +101,6 @@ def query_handler(call):
         bot.send_message(call.message.chat.id, "Что Вас интересует?", reply_markup=Main_inline_keyb)
     if call.data.split(':')[1] == "b2":
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Category_inline_keyb)
-
     if call.data.split(':')[0] in column_dict:
         print("субкатегории")
         print(call.data.split(':')[0], call.data.split(':')[1])
@@ -112,6 +122,10 @@ def query_handler(call):
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Dish_inline_keyb)
     if call.data.split(':')[1] == "b3":
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Sub_inline_keyb)
+    if call.data.split(':')[1] == "txt2":
+        bot.send_message(call.message.chat.id, f"{gg}")
+
+
 
 
 

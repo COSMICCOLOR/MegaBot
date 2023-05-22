@@ -6,6 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="2d4344d5-b7b1-4eef-80e1-2c6d974dbd51" name="Changes" comment="change 4">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DATABASE/DBrestraurant.py" beforeDir="false" afterPath="$PROJECT_DIR$/DATABASE/DBrestraurant.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DATABASE/restaurant1.db" beforeDir="false" afterPath="$PROJECT_DIR$/DATABASE/restaurant1.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dima.py" beforeDir="false" afterPath="$PROJECT_DIR$/dima.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/restaurant1.db" beforeDir="false" afterPath="$PROJECT_DIR$/restaurant1.db" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -151,7 +155,21 @@
       <option name="project" value="LOCAL" />
       <updated>1684743309227</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="change 4">
+      <created>1684743759547</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1684743759547</updated>
+    </task>
+    <task id="LOCAL-00013" summary="change 4">
+      <created>1684745724113</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1684745724113</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
