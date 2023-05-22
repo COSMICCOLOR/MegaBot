@@ -127,7 +127,7 @@ def query_handler(call):
         Reviews_inline_keyb.add(InlineKeyboardButton("Наш сервис (отзывы)", callback_data="review:r1"))
         Reviews_inline_keyb.add(InlineKeyboardButton("Наша еда (отзывы)", callback_data="review:r2"))
         Reviews_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
-        bot.send_message(call.message.chat.id, "Выбирайте", reply_markup=Reviews_inline_keyb)
+        bot.send_message(call.message.chat.id, "Выбирайте:", reply_markup=Reviews_inline_keyb)
         bot.send_message(call.message.chat.id, f"{gg}")
 
 
