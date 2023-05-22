@@ -57,6 +57,8 @@ with conn:
     dish_names = [i[1] for i in conn.execute(f"SELECT * FROM Dish")]
     dish_cat_ids = [i[11] for i in conn.execute(f"SELECT * FROM Dish")]
     dish_dict = dict(zip(dish_names, dish_cat_ids))
+    dish_all_dict=dict(zip(dish_names, [[i[1],i[2], i[3], i[4],i[5], i[6], i[7], i[9]] for i in conn.execute(f"SELECT * FROM Dish")]))
+
 # print(dish_names)
 # print(dish_dict)
 
@@ -120,6 +122,25 @@ def query_handler(call):
         Dish_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
         Dish_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:b3"))
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Dish_inline_keyb)
+
+    if call.data.split(':')[0] in dish_dict:
+        print(call.data.split(':')[0])
+        markup_dish = InlineKeyboardMarkup(row_width=3)
+        markup_dish.add(InlineKeyboardButton('<', callback_data='left'),
+                        InlineKeyboardButton('Кол-во', callback_data='None'),
+                        InlineKeyboardButton('>', callback_data='right'),
+                        InlineKeyboardButton('Заказать', callback_data='buy'),
+                        InlineKeyboardButton("В корзину", callback_data="basket"),)
+        if call.data.split(':')[0] in dish_all_dict:
+            # img = open(rf"C:\Users\admin\MegaBot\photo\{dish_all_dict[call.data.split(':')[0]][2]}", 'rb')
+            # bot.send_photo(call.message.chat.id, img)
+            bot.send_message(call.message.chat.id,
+                             f"{call.data.split(':')[0]}\nОписание:{dish_all_dict[call.data.split(':')[0]][1]}\nЦена: {dish_all_dict[call.data.split(':')[0]][3]}BYN (В упаковке вы увидите  {dish_all_dict[call.data.split(':')[0]][7]}шт.)\nВес:"
+                             f" {dish_all_dict[call.data.split(':')[0]][5]}"
+                             f" {dish_all_dict[call.data.split(':')[0]][6]}\nВремя "
+                             f"приготовления: {dish_all_dict[call.data.split(':')[0]][4]} миунут!\n",
+                             reply_markup=markup_dish)
+
     if call.data.split(':')[1] == "b3":
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Sub_inline_keyb)
     if call.data.split(':')[1] == "txt2":
