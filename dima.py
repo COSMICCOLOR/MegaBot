@@ -57,8 +57,10 @@ with conn:
     data2 = cursor.fetchall()  # fetchone
     dish_names = [i[1] for i in conn.execute(f"SELECT * FROM Dish")]
     dish_cat_ids = [i[11] for i in conn.execute(f"SELECT * FROM Dish")]
+    dish_ids = [i[0] for i in conn.execute(f"SELECT * FROM Dish")]
+    dish_dict2 = dict(zip(dish_names, dish_ids))
     dish_dict = dict(zip(dish_names, dish_cat_ids))
-    dish_all_dict=dict(zip(dish_names, [[i[1],i[2], i[3], i[4],i[5], i[6], i[7], i[9]] for i in conn.execute(f"SELECT * FROM Dish")]))
+    dish_all_dict = dict(zip(dish_names, [[i[1],i[2], i[3], i[4],i[5], i[6], i[7], i[9]] for i in conn.execute(f"SELECT * FROM Dish")]))
 
 # print(dish_names)
 # print(dish_dict)
@@ -66,6 +68,19 @@ with conn:
 with conn:
     data = conn.execute("SELECT * FROM Reviews")
     print(data.fetchall())
+    review_order = [i[1] for i in conn.execute(f"SELECT * FROM Reviews")]
+    review_dish = [i[2] for i in conn.execute(f"SELECT * FROM Reviews")]
+    client_id = [i[3] for i in conn.execute(f"SELECT * FROM Reviews")]
+    orders_id = [i[4] for i in conn.execute(f"SELECT * FROM Reviews")]
+    dish_id = [i[5] for i in conn.execute(f"SELECT * FROM Reviews")]
+    review_order_dict = dict(zip(review_order, client_id))
+    print(review_order_dict)
+    review_dish_dict = dict(zip(review_dish, dish_id))
+    print(review_dish_dict)
+    client_name = [i[1] for i in conn.execute(f"SELECT * FROM Clients")]
+    client_id2 = [i[0] for i in conn.execute(f"SELECT * FROM Clients")]
+    client_dict = dict(zip(client_id2, client_name))
+    print(client_dict)
     cursor = conn.cursor()
     cursor.execute(f"SELECT * FROM Reviews")
     data_feedback = cursor.fetchall()  # fetchone
@@ -149,7 +164,19 @@ def query_handler(call):
         Reviews_inline_keyb.add(InlineKeyboardButton("Отзывы о еде", callback_data="review:r2"))
         Reviews_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
         bot.send_message(call.message.chat.id, "Выбирайте", reply_markup=Reviews_inline_keyb)
-        bot.send_message(call.message.chat.id, f"{gg}")
+    if call.data.split(':')[1] == "r1":
+        result_card = ""
+        for key, value in review_order_dict.items():
+            result_card += f"{client_dict[value]}: '{key}'\n\n"
+        bot.send_message(call.message.chat.id, f"{result_card}")
+    if call.data.split(':')[1] == "r2":
+        # Создаем клавиатуру и кнопки для блюд с отзывами
+        ReviewDish_inline_keyb = InlineKeyboardMarkup()
+        [ReviewDish_inline_keyb.add(InlineKeyboardButton(key, callback_data=f"r{key}:{value}r")) for key, value in
+         dish_dict2.items() if value in dish_id]
+        ReviewDish_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
+        ReviewDish_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:b3"))
+        bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=ReviewDish_inline_keyb)
 
 
 
