@@ -24,9 +24,9 @@ with conn:
     column_names = [i[1] for i in conn.execute(f"SELECT * FROM CategoryDish")]
     column_ids = [i[0] for i in conn.execute(f"SELECT * FROM CategoryDish")]
     column_dict = dict(zip(column_names, column_ids))
-print(column_names)
-print(column_ids)
-print(column_dict)
+# print(column_names)
+# print(column_ids)
+# print(column_dict)
 
 
 with conn:
@@ -34,15 +34,19 @@ with conn:
     cursor.execute(f"SELECT * FROM SubCategory")
     data = cursor.fetchall()  # fetchone
     subcat_names = [i[1] for i in conn.execute(f"SELECT * FROM SubCategory")]
-    subcat_ids = [i[4] for i in conn.execute(f"SELECT * FROM SubCategory")]
-    subcat_dict = dict(zip(subcat_names, subcat_ids))
-print(subcat_names)
-print(subcat_ids)
-print(subcat_dict)
+    cat_ids = [str(i[4]) for i in conn.execute(f"SELECT * FROM SubCategory")]
+    subcat_id = [str(i[0]) for i in conn.execute(f"SELECT * FROM SubCategory")]
+    subcat_dict = dict(zip(subcat_names, cat_ids))  # словарь {название субкатегории: id CategoryDish}
+    subcat_dict2 = dict(zip(subcat_names, subcat_id))  # словарь {название субкатегории: id SubCategory}
+    subcat_dict3 = {k: ''.join([d[k] for d in (subcat_dict, subcat_dict2)]) for k in subcat_dict.keys()}  # словарь {название субкатегории: 'id CategoryDish+id SubCategory'} значение из двух айдишек будем потом разбивать в колбэк дате
+# print(subcat_names)
+# print(cat_ids)
+# print(subcat_dict)
+# print(subcat_dict3)
 
 with conn:
     data = conn.execute("SELECT * FROM Clients")
-    print(data.fetchall())
+    # print(data.fetchall())
 
 with conn:
     data = conn.execute("SELECT * FROM Dish")
@@ -53,8 +57,8 @@ with conn:
     dish_names = [i[1] for i in conn.execute(f"SELECT * FROM Dish")]
     dish_cat_ids = [i[11] for i in conn.execute(f"SELECT * FROM Dish")]
     dish_dict = dict(zip(dish_names, dish_cat_ids))
-print(dish_names)
-print(dish_dict)
+# print(dish_names)
+# print(dish_dict)
 
 # Создаем клавиатуру и кнопки для главного меню USER-панели
 Main_inline_keyb = InlineKeyboardMarkup()
@@ -75,6 +79,7 @@ def start(message):
 def query_handler(call):
     bot.answer_callback_query(callback_query_id=call.id,)
     if call.data.split(':')[1] == "txt1":
+        print("главные категории")
         Category_inline_keyb = InlineKeyboardMarkup()
         [Category_inline_keyb.add(InlineKeyboardButton(key, callback_data=f"{key}:{value}")) for key, value in column_dict.items()]
         Category_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
@@ -82,15 +87,17 @@ def query_handler(call):
     if call.data.split(':')[1] == "b1":
         bot.send_message(call.message.chat.id, "Что Вас интересует?", reply_markup=Main_inline_keyb)
     if call.data.split(':')[0] in column_dict:
+        print("субкатегории")
         print(call.data.split(':')[0], call.data.split(':')[1])
         Sub_inline_keyb = InlineKeyboardMarkup()
-        [Sub_inline_keyb.add(InlineKeyboardButton(key, callback_data=f"{key}:{value}")) for key, value in subcat_dict.items() if str(value) == call.data.split(':')[1]]
+        [Sub_inline_keyb.add(InlineKeyboardButton(key, callback_data=f"{key}:{value}")) for key, value in subcat_dict3.items() if str(value[0]) == call.data.split(':')[1]]
         Sub_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Sub_inline_keyb)
-    if call.data.split(':')[0] in subcat_dict:
-        print(call.data.split(':')[0], call.data.split(':')[1])
+    if call.data.split(':')[0] in subcat_dict3:
+        print("виды однородных блюд типа супы, пиццы и тд")
+        print(call.data.split(':')[0], call.data.split(':')[1][1])
         Dish_inline_keyb = InlineKeyboardMarkup()
-        [Dish_inline_keyb.add(InlineKeyboardButton(key, callback_data=f"{key}:{value}")) for key, value in dish_dict.items() if str(value) == call.data.split(':')[1]]
+        [Dish_inline_keyb.add(InlineKeyboardButton(key, callback_data=f"{key}:{value}")) for key, value in dish_dict.items() if str(value) == call.data.split(':')[1][1]]
         Dish_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Dish_inline_keyb)
 
