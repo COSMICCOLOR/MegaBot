@@ -51,7 +51,7 @@ with conn:
     cursor.execute(f"SELECT * FROM Dish")
     data2 = cursor.fetchall()  # fetchone
     dish_names = [i[1] for i in conn.execute(f"SELECT * FROM Dish")]
-    dish_cat_ids = [i[10] for i in conn.execute(f"SELECT * FROM Dish")]
+    dish_cat_ids = [i[11] for i in conn.execute(f"SELECT * FROM Dish")]
     dish_dict = dict(zip(dish_names, dish_cat_ids))
 print(dish_names)
 print(dish_dict)
@@ -87,6 +87,13 @@ def query_handler(call):
         [Sub_inline_keyb.add(InlineKeyboardButton(key, callback_data=f"{key}:{value}")) for key, value in subcat_dict.items() if str(value) == call.data.split(':')[1]]
         Sub_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Sub_inline_keyb)
+    if call.data.split(':')[0] in subcat_dict:
+        print(call.data.split(':')[0], call.data.split(':')[1])
+        Dish_inline_keyb = InlineKeyboardMarkup()
+        [Dish_inline_keyb.add(InlineKeyboardButton(key, callback_data=f"{key}:{value}")) for key, value in dish_dict.items() if str(value) == call.data.split(':')[1]]
+        Dish_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
+        bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Dish_inline_keyb)
+
 
 print("Ready")
 bot.infinity_polling(none_stop=True, interval=0)
