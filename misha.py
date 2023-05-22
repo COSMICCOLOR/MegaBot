@@ -1,4 +1,1 @@
-print("Hello World")
-print("hello hello")
-print('SADFGHJKN/') #Нашаманил :)
-#zdfgfdsgfhdgfmh,
+#6250574142:AAEPwIKpKo0oLiwD0nlQVTXC6JcUWTqLX20
