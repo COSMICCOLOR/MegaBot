@@ -32,17 +32,6 @@ with con:
     """)
 
     con.execute("""
-            CREATE TABLE IF NOT EXISTS SubCategory (
-                id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                name TEXT,
-                description TEXT,
-                is_stop BOOLEAN,
-                category_id INTEGER,
-                FOREIGN KEY (category_id) REFERENCES CategoryDish (id)
-            );
-        """)
-
-    con.execute("""
         CREATE TABLE IF NOT EXISTS Dish (
             id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
             name TEXT,
@@ -55,9 +44,7 @@ with con:
             is_stop BOOLEAN,
             count INTEGER,
             category_id INTEGER,
-            subcategory_id INTEGER,
-            FOREIGN KEY (category_id) REFERENCES CategoryDish (id),
-            FOREIGN KEY (subcategory_id) REFERENCES SubCategory (id)
+            FOREIGN KEY (category_id) REFERENCES CategoryDish (id)
         );
     """)
 
@@ -121,14 +108,14 @@ with con:
 
 
 
-# clients = "INSERT OR IGNORE INTO Clients (name, phone_number, delivery_adress) values(?, ?, ?)"
-# # INSERT OR IGNORE - модификатор для уникальных значений
-# with con:
-#     con.execute(clients, ["Артем Наумов", "+375297777777", "ул.Пушкинская д.53"])
-#
-#
-#
-# with con:
-#     data = con.execute("SELECT * FROM Clients")
-#     print(data.fetchall())
-#     # fetchone
+clients = "INSERT OR IGNORE INTO Clients (name, phone_number, delivery_adress) values(?, ?, ?)"
+# INSERT OR IGNORE - модификатор для уникальных значений
+with con:
+    con.execute(clients, ["Артем Наумов", "+375297777777", "ул.Пушкинская д.53"])
+
+
+
+with con:
+    data = con.execute("SELECT * FROM Clients")
+    print(data.fetchall())
+    # fetchone
