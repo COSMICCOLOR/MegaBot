@@ -123,6 +123,11 @@ def query_handler(call):
     if call.data.split(':')[1] == "b3":
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Sub_inline_keyb)
     if call.data.split(':')[1] == "txt2":
+        Reviews_inline_keyb = InlineKeyboardMarkup()
+        Reviews_inline_keyb.add(InlineKeyboardButton("Наш сервис (отзывы)", callback_data="review:r1"))
+        Reviews_inline_keyb.add(InlineKeyboardButton("Наша еда (отзывы)", callback_data="review:r2"))
+        Reviews_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
+        bot.send_message(call.message.chat.id, "Выбирайте", reply_markup=Reviews_inline_keyb)
         bot.send_message(call.message.chat.id, f"{gg}")
 
 
