@@ -103,6 +103,7 @@ Main_inline_keyb.add(InlineKeyboardButton("Профиль пользовател
 def start(message):
     if message.text.lower() == '/start':
         bot.send_message(message.chat.id, '''Добро пожаловать в чат-бот "FoodBot". Здесь Вы можете заказать еду по вкусу из ресторана "Літвіны".\nЧто Вас интересует?''', reply_markup=Main_inline_keyb)
+    print(message.from_user.id)
 
 @bot.callback_query_handler(func=lambda call: call.data.split(":"))
 def query_handler(call):
@@ -180,7 +181,7 @@ def query_handler(call):
         ReviewDish_inline_keyb = InlineKeyboardMarkup()
         [ReviewDish_inline_keyb.add(InlineKeyboardButton(key, callback_data=f"r{key}:{value}r")) for key, value in
          dish_dict2.items() if value in dish_id]
-        ReviewDish_inline_keyb.add(InlineKeyboardButton("Оставить отзыв", callback_data="feedback:r4"))
+        ReviewDish_inline_keyb.add(InlineKeyboardButton("Оставить отзыв", callback_data="feedback:r3"))
         ReviewDish_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
         ReviewDish_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:txt2"))
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=ReviewDish_inline_keyb)
@@ -191,13 +192,17 @@ def query_handler(call):
             if key == call.data.split(':')[1][:-1]:
                 result_card += f"\U0001F5E8{review_dish_dict[call.data.split(':')[1][:-1]]}\n"
         AfterReviewDish_inline_keyb = InlineKeyboardMarkup()
-        AfterReviewDish_inline_keyb.add(InlineKeyboardButton("Оставить отзыв", callback_data="feedback:r4"))
+        AfterReviewDish_inline_keyb.add(InlineKeyboardButton("Оставить отзыв", callback_data="feedback:r3"))
         AfterReviewDish_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
         AfterReviewDish_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="review:r2"))
-        with open("photo/" + call.data.split(':')[1][:-1] + ".jpg", "rb") as img:
+        with open("photo/" + call.data.split(':')[1][:-1] + ".jpg", "rb") as img:  # calldata - id блюда и название соотв-й картинки этого блюда
             bot.send_photo(call.message.chat.id, photo=img)
         bot.send_message(call.message.chat.id, f"{result_card}", reply_markup=AfterReviewDish_inline_keyb)
-
+    if call.data.split(':')[1] == "r3":
+        print()
+        bot.answer_callback_query(call.id)  # подтвердить нажатие
+        bot.send_message(call.message.chat.id, "Как вы оцениваете работу ресторана и блюдо, которое вы заказали?",
+                         reply_markup=telebot.types.ForceReply())  # спросить пользователя о его отзыве
 
 
 
