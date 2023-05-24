@@ -17,7 +17,7 @@ import uuid
 token = '6112420224:AAFd0gDtUiAC2qqWo4osq82D6qyGH07c_UY'
 bot = telebot.TeleBot(token)
 
-conn = sqlite3.connect('restaurant1.db')
+conn = sqlite3.connect('restaurant1.db', check_same_thread=False)
 with conn:
     cursor = conn.cursor()
     cursor.execute(f"SELECT * FROM CategoryDish")
@@ -68,7 +68,9 @@ with conn:
     dish_ids = [str(i[0]) for i in conn.execute(f"SELECT * FROM Dish")]
     dish_dict2 = dict(zip(dish_names, dish_ids))
     dish_dict = dict(zip(dish_names, dish_cat_ids))
-    dish_all_dict = dict(zip(dish_names, [[i[1],i[2], i[3], i[4],i[5], i[6], i[7], i[9]] for i in conn.execute(f"SELECT * FROM Dish")]))
+    # dish_all_dict = dict(zip(dish_names, [[i[1],i[2], i[3], i[4],i[5], i[6], i[7], i[9]] for i in conn.execute(f"SELECT * FROM Dish")]))
+    dish_all_dict = dict(zip(dish_names, [[i[1],i[2], i[3], i[4],i[5], i[6], i[7], i[9], i[0]] for i in conn.execute(f"SELECT * FROM Dish")]))
+
 
 # print(dish_names)
 # print(dish_dict)
@@ -105,6 +107,19 @@ Main_inline_keyb.add(InlineKeyboardButton("Моя корзина", callback_data
 Main_inline_keyb.add(InlineKeyboardButton("Мои заказы", callback_data="menu:txt4"))
 Main_inline_keyb.add(InlineKeyboardButton("О нас", callback_data="menu:txt5"))
 Main_inline_keyb.add(InlineKeyboardButton("Профиль пользователя", callback_data="menu:txt6"))
+
+
+"""***START Функция для создания клавиатуры с обновляемой кнопкой количества заказываемого блюда START***"""
+count = 1  # переменная для хранения количества добавляемого в корзину блюда
+def create_keyboard():  # функция для создания клавиатуры под карточкой блюда
+    markup_dish = InlineKeyboardMarkup(row_width=3)
+    markup_dish.add(InlineKeyboardButton('-', callback_data='1:minus'),
+                    InlineKeyboardButton(str(count), callback_data=':count'),
+                    InlineKeyboardButton('+', callback_data='2:plus'),
+                    InlineKeyboardButton("В корзину", callback_data="0:basket"),
+                    InlineKeyboardButton('Заказать', callback_data='3:buy'))
+    return markup_dish
+"""***END Функция для создания клавиатуры с обновляемой кнопкой количества заказываемого блюда END***"""
 
 
 @bot.message_handler(content_types=['text'])
@@ -150,23 +165,92 @@ def query_handler(call):
         Dish_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:b3"))
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Dish_inline_keyb)
 
+    # if call.data.split(':')[0] in dish_dict:
+    #     print(call.data.split(':')[0])
+    #     markup_dish = InlineKeyboardMarkup(row_width=3)
+    #     markup_dish.add(InlineKeyboardButton('<', callback_data='left'),
+    #                     InlineKeyboardButton('Кол-во', callback_data='None'),
+    #                     InlineKeyboardButton('>', callback_data='right'),
+    #                     InlineKeyboardButton('Заказать', callback_data='buy'),
+    #                     InlineKeyboardButton("В корзину", callback_data="basket"),)
+    #     if call.data.split(':')[0] in dish_all_dict:
+    #         # img = open(rf"C:\Users\admin\MegaBot\photo\{dish_all_dict[call.data.split(':')[0]][2]}", 'rb')
+    #         # bot.send_photo(call.message.chat.id, img)
+    #         bot.send_message(call.message.chat.id,
+    #                          f"{call.data.split(':')[0]}\nОписание:{dish_all_dict[call.data.split(':')[0]][1]}\nЦена: {dish_all_dict[call.data.split(':')[0]][3]}BYN (В упаковке вы увидите  {dish_all_dict[call.data.split(':')[0]][7]}шт.)\nВес:"
+    #                          f" {dish_all_dict[call.data.split(':')[0]][5]}"
+    #                          f" {dish_all_dict[call.data.split(':')[0]][6]}\nВремя "
+    #                          f"приготовления: {dish_all_dict[call.data.split(':')[0]][4]} миунут!\n",
+    #                          reply_markup=markup_dish)
+
+#START________________________________code serezha
+
+    global dish_ids
+    global dish_names
+
     if call.data.split(':')[0] in dish_dict:
-        print(call.data.split(':')[0])
-        markup_dish = InlineKeyboardMarkup(row_width=3)
-        markup_dish.add(InlineKeyboardButton('<', callback_data='left'),
-                        InlineKeyboardButton('Кол-во', callback_data='None'),
-                        InlineKeyboardButton('>', callback_data='right'),
-                        InlineKeyboardButton('Заказать', callback_data='buy'),
-                        InlineKeyboardButton("В корзину", callback_data="basket"),)
-        if call.data.split(':')[0] in dish_all_dict:
-            # img = open(rf"C:\Users\admin\MegaBot\photo\{dish_all_dict[call.data.split(':')[0]][2]}", 'rb')
-            # bot.send_photo(call.message.chat.id, img)
-            bot.send_message(call.message.chat.id,
-                             f"{call.data.split(':')[0]}\nОписание:{dish_all_dict[call.data.split(':')[0]][1]}\nЦена: {dish_all_dict[call.data.split(':')[0]][3]}BYN (В упаковке вы увидите  {dish_all_dict[call.data.split(':')[0]][7]}шт.)\nВес:"
-                             f" {dish_all_dict[call.data.split(':')[0]][5]}"
-                             f" {dish_all_dict[call.data.split(':')[0]][6]}\nВремя "
-                             f"приготовления: {dish_all_dict[call.data.split(':')[0]][4]} миунут!\n",
-                             reply_markup=markup_dish)
+        dish_ids = []
+        # markup_dish = InlineKeyboardMarkup(row_width=3)
+        # markup_dish.add(InlineKeyboardButton('-', callback_data='1:minus'),
+        #                 InlineKeyboardButton(str(count), callback_data='count'),
+        #                 InlineKeyboardButton('+', callback_data='2:plus'),
+        #                 InlineKeyboardButton("В корзину", callback_data="0:basket"),
+        #                 InlineKeyboardButton('Заказать', callback_data='3:buy'))
+    if call.data.split(':')[0] in dish_all_dict:
+        # img = open(rf"C:\Users\admin\MegaBot\photo\{dish_all_dict[call.data.split(':')[0]][2]}", 'rb')
+        # bot.send_photo(call.message.chat.id, img)
+        dish_ids.append(dish_all_dict[call.data.split(':')[0]][8])
+        dish_names = dish_all_dict[call.data.split(':')[0]][0]
+        global result_dish  # формируем карточку блюда и отправляем юзеру с клавиатурой для заказа и добавления в корзину
+        result_dish = f"{call.data.split(':')[0]}\n" \
+                      f"Описание:{dish_all_dict[call.data.split(':')[0]][1]}\n" \
+                      f"Цена: {dish_all_dict[call.data.split(':')[0]][3]}BYN (В упаковке вы увидите  {dish_all_dict[call.data.split(':')[0]][7]}шт.)\n" \
+                      f"Вес:{dish_all_dict[call.data.split(':')[0]][5]}{dish_all_dict[call.data.split(':')[0]][6]}\n" \
+                      f"Время приготовления: {dish_all_dict[call.data.split(':')[0]][4]} миунут!\n"
+        bot.send_message(call.message.chat.id, f"{result_dish}", reply_markup=create_keyboard())
+
+    """***START Обрабаботки колбэка от клавиатуры с обновляемой кнопкой количества заказываемого блюда START***"""
+    global count  # используем глобальную переменную для количества добавляемого в корзину блюда
+    bot.answer_callback_query(call.id)  # подтверждаем нажатие
+    if call.data.split(':')[1] == "minus":  # если нажата кнопка "-"
+        if count > 1:  # если количество больше одного
+            count -= 1  # уменьшаем количество на один
+            bot.edit_message_text(f"{result_dish}", call.message.chat.id, call.message.message_id,
+                                  reply_markup=create_keyboard())  # обновляем сообщение с клавиатурой
+    elif call.data.split(':')[1] == "plus":  # если нажата кнопка "+"
+        count += 1  # увеличиваем количество на один
+        bot.edit_message_text(f"{result_dish}", call.message.chat.id, call.message.message_id,
+                              reply_markup=create_keyboard())  # обновляем сообщение с клавиатурой
+    """***END Обрабаботки колбэка от клавиатуры с обновляемой кнопкой количества заказываемого блюда END***"""
+
+    global dict_info_dish_id
+    client_id = int(call.message.chat.id)
+    if call.data.split(':')[1] == 'basket':
+        dict_info_dish_id = int(dish_ids[0])
+        print(dict_info_dish_id, type(dict_info_dish_id))
+        cart = "INSERT OR IGNORE INTO ShoppingCart (client_id, dish_id, total_price) values(?, ?, ?)"
+        with conn:
+            conn.execute(cart, [client_id, dict_info_dish_id, 5.0])
+        conn.commit()
+
+    if call.data.split(':')[1] == 'buy':
+        sravnenie_ids = [i[0] for i in cursor.execute(
+            f'SELECT ShoppingCart.dish_id FROM ShoppingCart WHERE ShoppingCart.client_id = {client_id}')]
+        info = []
+        for i in sravnenie_ids:
+            dish_name_cart = cursor.execute(f'SELECT * FROM Dish WHERE Dish.id = {i}')
+            infos = [i for i in dish_name_cart]
+            info.append(infos)
+        print(info)
+        result = ""
+        total_price = 0
+        for i in info:
+            for j in i:
+                total_price += j[4]
+                result += f'Блюдо: {j[1]}\n'
+        bot.send_message(call.message.chat.id, f'{result} Цена:{total_price}')
+# END_______________________________________________________________________________________________code serezha
+
     if call.data.split(':')[1] == "b3":
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Sub_inline_keyb)
     if call.data.split(':')[1] == "txt2":
@@ -233,6 +317,7 @@ def query_handler(call):
         ClientOrders_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
         ClientOrders_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:txt2"))
         bot.send_message(call.message.chat.id, "Вот все Ваши заказы. Выберите тот, на который хотите оставить отзыв:", reply_markup=ClientOrders_inline_keyb)
+
 
 
 print("Ready")
