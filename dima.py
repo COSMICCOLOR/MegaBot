@@ -53,6 +53,8 @@ with conn:
 
 with conn:
     orders_telegram_id = [i[5] for i in conn.execute(f"SELECT * FROM Orders")]
+    orders_datetime = [i[4] for i in conn.execute(f"SELECT * FROM Orders")]
+
     print(type(orders_telegram_id[0]), orders_telegram_id)
 
 with conn:
@@ -225,9 +227,12 @@ def query_handler(call):
         else:
             bot.send_message(call.message.chat.id, "Оставить отзыв о работе ресторана Вы сможете после оформления заказа с помощью нашаего чат-бота. Спасибо!",
                              reply_markup=MakeReviewError_inline_keyb)  # выдать клаву если пользователь ранее не делал заказов
-
     if call.data.split(':')[1] == "r4":
-        bot.send_message(call.message.chat.id, "Вот все Ваши заказы. Выберите тот, на который хотите оставить отзыв:", reply_markup=MakeReviewSuccess_inline_keyb)
+        ClientOrders_inline_keyb = InlineKeyboardMarkup()
+        [ClientOrders_inline_keyb.add(InlineKeyboardButton(date_info, callback_data=f"{date_info}")) for date_info in orders_datetime]
+        ClientOrders_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
+        ClientOrders_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:txt2"))
+        bot.send_message(call.message.chat.id, "Вот все Ваши заказы. Выберите тот, на который хотите оставить отзыв:", reply_markup=ClientOrders_inline_keyb)
 
 
 print("Ready")
