@@ -16,7 +16,7 @@ import uuid
 token = '5991850571:AAGwpP8X-kv-nN0P55SciR2sMxCvLkGOeuU'
 bot = telebot.TeleBot(token)
 
-conn = sqlite3.connect('restaurant1.db')
+conn = sqlite3.connect('restaurant1.db', check_same_thread=False)
 with conn:
     cursor = conn.cursor()
     cursor.execute(f"SELECT * FROM CategoryDish")
@@ -49,7 +49,7 @@ with conn:
     dish_names = [i[1] for i in conn.execute(f"SELECT * FROM Dish")]
     dish_cat_ids = [i[11] for i in conn.execute(f"SELECT * FROM Dish")]
     id_dish = [i[0] for i in conn.execute(f"SELECT * FROM Dish")]
-    dish_all_dict=dict(zip(dish_names, [[i[1],i[2], i[3], i[4],i[5], i[6], i[7], i[9]] for i in conn.execute(f"SELECT * FROM Dish")]))
+    dish_all_dict=dict(zip(dish_names, [[i[1],i[2], i[3], i[4],i[5], i[6], i[7], i[9], i[0]] for i in conn.execute(f"SELECT * FROM Dish")]))
 
     dish_dict = dict(zip(dish_names, dish_cat_ids))
 
@@ -92,17 +92,46 @@ def query_handler(call):
         Dish_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Dish_inline_keyb)
         # print(call.data.split(':')[0], call.data.split(':')[1])
+    global dish_ids
+    global dish_names
     if call.data.split(':')[0] in dish_dict:
-        print(call.data.split(':')[0])
+        dish_ids = []
         markup_dish = InlineKeyboardMarkup(row_width=5)
-        markup_dish.add(InlineKeyboardButton("В корзину", callback_data="basket"), InlineKeyboardButton('<', callback_data='left'), InlineKeyboardButton('Кол-во', callback_data='None'), InlineKeyboardButton('>', callback_data='right'), InlineKeyboardButton('Заказать', callback_data='buy'))
+        markup_dish.add(InlineKeyboardButton("В корзину", callback_data="0:basket"), InlineKeyboardButton('<', callback_data='1:left'), InlineKeyboardButton('Кол-во', callback_data='None'), InlineKeyboardButton('>', callback_data='2:right'), InlineKeyboardButton('Заказать', callback_data='3:buy'))
         if call.data.split(':')[0] in dish_all_dict:
-            img = open(rf"C:\Users\admin\MegaBot\photo\{dish_all_dict[call.data.split(':')[0]][2]}", 'rb')
-            bot.send_photo(call.message.chat.id, img)
+            # img = open(rf"C:\Users\admin\MegaBot\photo\{dish_all_dict[call.data.split(':')[0]][2]}", 'rb')
+            # bot.send_photo(call.message.chat.id, img)
+            dish_ids.append(dish_all_dict[call.data.split(':')[0]][8])
+            dish_names = dish_all_dict[call.data.split(':')[0]][0]
             bot.send_message(call.message.chat.id,  f"{call.data.split(':')[0]}\nОписание:{dish_all_dict[call.data.split(':')[0]][1]}\nЦена: {dish_all_dict[call.data.split(':')[0]][3]}BYN (В упаковке вы увидите  {dish_all_dict[call.data.split(':')[0]][7]}шт.)\nВес:"
                                                     f" {dish_all_dict[call.data.split(':')[0]][5]}"
                                                     f" {dish_all_dict[call.data.split(':')[0]][6]}\nВремя "
                                                     f"приготовления: {dish_all_dict[call.data.split(':')[0]][4]} миунут!\n", reply_markup = markup_dish)
+
+    global dict_info_dish_id
+    client_id = int(call.message.chat.id)
+    if call.data.split(':')[1] == 'basket':
+        dict_info_dish_id = int(dish_ids[0])
+        print(dict_info_dish_id, type(dict_info_dish_id))
+        cursor.execute("INSERT OR IGNORE INTO ShoppingCart (client_id, dish_id, total_price) values(?, ?, ?);", (client_id, dict_info_dish_id, 5.0))
+    conn.commit()
+
+
+    if call.data.split(':')[1] == 'buy':
+        sravnenie_ids = [i[0] for i in cursor.execute(f'SELECT ShoppingCart.dish_id FROM ShoppingCart WHERE ShoppingCart.client_id = {client_id}')]
+        info = []
+        for i in sravnenie_ids:
+            dish_name_cart = cursor.execute(f'SELECT * FROM Dish WHERE Dish.id = {i}')
+            infos = [i for i in dish_name_cart]
+            info.append(infos)
+        print(info)
+        result = ""
+        total_price = 0
+        for i in info:
+            for j in i:
+                total_price += j[4]
+                result+=f'Блюдо: {j[1]}\n'
+        bot.send_message(call.message.chat.id, f'{result} Цена:{total_price}')
 
 
 print("Ready")
