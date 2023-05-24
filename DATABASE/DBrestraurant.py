@@ -92,6 +92,22 @@ with con:
         else:
             raise  # повторно выбросить исключение
 
+    try:
+        con.execute("ALTER TABLE Clients ADD COLUMN telegram_id INTEGER")
+    except sl.OperationalError as e:
+        if 'duplicate column name' in str(e):
+            pass  # игнорировать ошибку
+        else:
+            raise  # повторно выбросить исключение
+
+    try:
+        con.execute("ALTER TABLE Orders ADD COLUMN telegram_id INTEGER")
+    except sl.OperationalError as e:
+        if 'duplicate column name' in str(e):
+            pass  # игнорировать ошибку
+        else:
+            raise  # повторно выбросить исключение
+
     con.execute("""
                 CREATE TABLE IF NOT EXISTS Reviews (
                     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -111,7 +127,7 @@ with con:
 clients = "INSERT OR IGNORE INTO Clients (name, phone_number, delivery_adress) values(?, ?, ?)"
 # INSERT OR IGNORE - модификатор для уникальных значений
 with con:
-    con.execute(clients, ["Артем Наумов", "+375297777777", "ул.Пушкинская д.53"])
+    con.execute(clients, ["Генадзь Бураўкін ", "+3752977775439", "вул.К.Каліноўскага д.1863-1"])
 
 
 

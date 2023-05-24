@@ -48,6 +48,8 @@ with conn:
 with conn:
     data = conn.execute("SELECT * FROM Clients")
     # print(data.fetchall())
+    clients_telegram_id = [i[4] for i in conn.execute(f"SELECT * FROM Clients")]
+    print(clients_telegram_id)
 
 with conn:
     data = conn.execute("SELECT * FROM Dish")
@@ -103,6 +105,8 @@ Main_inline_keyb.add(InlineKeyboardButton("Профиль пользовател
 def start(message):
     if message.text.lower() == '/start':
         bot.send_message(message.chat.id, '''Добро пожаловать в чат-бот "FoodBot". Здесь Вы можете заказать еду по вкусу из ресторана "Літвіны".\nЧто Вас интересует?''', reply_markup=Main_inline_keyb)
+    global user_telegram_id
+    user_telegram_id = message.from_user.id
     print(message.from_user.id)
 
 @bot.callback_query_handler(func=lambda call: call.data.split(":"))
@@ -199,11 +203,14 @@ def query_handler(call):
             bot.send_photo(call.message.chat.id, photo=img)
         bot.send_message(call.message.chat.id, f"{result_card}", reply_markup=AfterReviewDish_inline_keyb)
     if call.data.split(':')[1] == "r3":
-        print()
-        bot.answer_callback_query(call.id)  # подтвердить нажатие
-        bot.send_message(call.message.chat.id, "Как вы оцениваете работу ресторана и блюдо, которое вы заказали?",
+        if user_telegram_id in clients_telegram_id:
+            print("clients id telegram", user_telegram_id)
+            bot.answer_callback_query(call.id)  # подтвердить нажатие
+            bot.send_message(call.message.chat.id, "Как вы оцениваете работу ресторана и блюдо, которое вы заказали?",
                          reply_markup=telebot.types.ForceReply())  # спросить пользователя о его отзыве
-
+        else:
+            bot.send_message(call.message.chat.id, "Вы оцениваете работу ресторана и блюдо, которое вы заказали?",
+                             reply_markup=telebot.types.ForceReply())  # спросить пользователя о его отзыве
 
 
 print("Ready")
