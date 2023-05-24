@@ -52,6 +52,10 @@ with conn:
     print(clients_telegram_id)
 
 with conn:
+    orders_telegram_id = [i[5] for i in conn.execute(f"SELECT * FROM Orders")]
+    print(type(orders_telegram_id[0]), orders_telegram_id)
+
+with conn:
     data = conn.execute("SELECT * FROM Dish")
     print(data.fetchall())
     cursor = conn.cursor()
@@ -107,7 +111,7 @@ def start(message):
         bot.send_message(message.chat.id, '''Добро пожаловать в чат-бот "FoodBot". Здесь Вы можете заказать еду по вкусу из ресторана "Літвіны".\nЧто Вас интересует?''', reply_markup=Main_inline_keyb)
     global user_telegram_id
     user_telegram_id = message.from_user.id
-    print(message.from_user.id)
+    print(type(user_telegram_id), message.from_user.id)
 
 @bot.callback_query_handler(func=lambda call: call.data.split(":"))
 def query_handler(call):
@@ -203,14 +207,27 @@ def query_handler(call):
             bot.send_photo(call.message.chat.id, photo=img)
         bot.send_message(call.message.chat.id, f"{result_card}", reply_markup=AfterReviewDish_inline_keyb)
     if call.data.split(':')[1] == "r3":
-        if user_telegram_id in clients_telegram_id:
+        MakeReviewError_inline_keyb = InlineKeyboardMarkup()
+        MakeReviewError_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
+        MakeReviewError_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:txt2"))
+        MakeReviewSuccess_inline_keyb = InlineKeyboardMarkup()
+        MakeReviewSuccess_inline_keyb.add(InlineKeyboardButton("Отзыв на заказ", callback_data="feedback:r4"))
+        MakeReviewSuccess_inline_keyb.add(InlineKeyboardButton("Отзыв на блюдо", callback_data="feedback:r5"))
+        if user_telegram_id in orders_telegram_id:
             print("clients id telegram", user_telegram_id)
-            bot.answer_callback_query(call.id)  # подтвердить нажатие
-            bot.send_message(call.message.chat.id, "Как вы оцениваете работу ресторана и блюдо, которое вы заказали?",
-                         reply_markup=telebot.types.ForceReply())  # спросить пользователя о его отзыве
+            #кнопка оставить отзыв на заказ
+            #кнопка оставить отзыв на блюдо
+            bot.send_message(call.message.chat.id, "Выбрать:", reply_markup=MakeReviewSuccess_inline_keyb)
+
+            # bot.answer_callback_query(call.id)  # подтвердить нажатие
+            # bot.send_message(call.message.chat.id, "Как вы оцениваете работу ресторана и блюдо, которое вы заказали?",
+            #              reply_markup=telebot.types.ForceReply())  # спросить пользователя о его отзыве
         else:
-            bot.send_message(call.message.chat.id, "Вы оцениваете работу ресторана и блюдо, которое вы заказали?",
-                             reply_markup=telebot.types.ForceReply())  # спросить пользователя о его отзыве
+            bot.send_message(call.message.chat.id, "Оставить отзыв о работе ресторана Вы сможете после оформления заказа с помощью нашаего чат-бота. Спасибо!",
+                             reply_markup=MakeReviewError_inline_keyb)  # выдать клаву если пользователь ранее не делал заказов
+
+    if call.data.split(':')[1] == "r4":
+        bot.send_message(call.message.chat.id, "Вот все Ваши заказы. Выберите тот, на который хотите оставить отзыв:", reply_markup=MakeReviewSuccess_inline_keyb)
 
 
 print("Ready")
