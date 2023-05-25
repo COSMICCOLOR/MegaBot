@@ -3,13 +3,11 @@ from telebot import types
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from telebot.types import InputMediaPhoto
 import sqlite3
-
 import array
 import gspread
 import requests
 import subprocess
 import os
-
 import datetime
 import uuid
 
@@ -102,10 +100,9 @@ with conn:
 # Создаем клавиатуру и кнопки для главного меню USER-панели
 Main_inline_keyb = InlineKeyboardMarkup()
 Main_inline_keyb.add(InlineKeyboardButton("Меню ресторана", callback_data="menu:txt1"))
-Main_inline_keyb.add(InlineKeyboardButton("Отзывы", callback_data="menu:txt2"))
 Main_inline_keyb.add(InlineKeyboardButton("Моя корзина", callback_data="menu:txt3"))
 Main_inline_keyb.add(InlineKeyboardButton("Мои заказы", callback_data="menu:txt4"))
-Main_inline_keyb.add(InlineKeyboardButton("О нас", callback_data="menu:txt5"))
+Main_inline_keyb.add(InlineKeyboardButton("О нас", callback_data="menu:txt2"))
 Main_inline_keyb.add(InlineKeyboardButton("Профиль пользователя", callback_data="menu:txt6"))
 
 
@@ -157,10 +154,10 @@ def query_handler(call):
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Sub_inline_keyb)
     if call.data.split(':')[0] in subcat_dict3:
         print("виды однородных блюд типа супы, пиццы и тд")
-        print(call.data.split(':')[0], call.data.split(':')[1][1])
+        print(call.data.split(':')[0], call.data.split(':')[1][1:], call.data.split(':'))
         # Создаем клавиатуру и кнопки для конкретных блюд внутри субкатегорий (напр., "Филадельфия маки")
         Dish_inline_keyb = InlineKeyboardMarkup()
-        [Dish_inline_keyb.add(InlineKeyboardButton(key, callback_data=f"{key}:{value}")) for key, value in dish_dict.items() if value == call.data.split(':')[1][1]]
+        [Dish_inline_keyb.add(InlineKeyboardButton(key, callback_data=f"{key}:{value}")) for key, value in dish_dict.items() if value == call.data.split(':')[1][1:]]
         Dish_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
         Dish_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:b3"))
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Dish_inline_keyb)
@@ -197,6 +194,7 @@ def query_handler(call):
         #                 InlineKeyboardButton("В корзину", callback_data="0:basket"),
         #                 InlineKeyboardButton('Заказать', callback_data='3:buy'))
     if call.data.split(':')[0] in dish_all_dict:
+        print("yyyyyyyyyyyy", call.data.split(':'), dish_all_dict[call.data.split(':')[0]][2])
         # img = open(rf"C:\Users\admin\MegaBot\photo\{dish_all_dict[call.data.split(':')[0]][2]}", 'rb')
         # bot.send_photo(call.message.chat.id, img)
         dish_ids.append(dish_all_dict[call.data.split(':')[0]][8])
@@ -207,9 +205,11 @@ def query_handler(call):
                       f"Цена: {dish_all_dict[call.data.split(':')[0]][3]}BYN (В упаковке вы увидите  {dish_all_dict[call.data.split(':')[0]][7]}шт.)\n" \
                       f"Вес:{dish_all_dict[call.data.split(':')[0]][5]}{dish_all_dict[call.data.split(':')[0]][6]}\n" \
                       f"Время приготовления: {dish_all_dict[call.data.split(':')[0]][4]} миунут!\n"
+        with open("photo/" + dish_all_dict[call.data.split(':')[0]][2], "rb") as img:  # calldata - id блюда и название соотв-й картинки этого блюда
+            bot.send_photo(call.message.chat.id, photo=img)
         bot.send_message(call.message.chat.id, f"{result_dish}", reply_markup=create_keyboard())
 
-    """***START Обрабаботки колбэка от клавиатуры с обновляемой кнопкой количества заказываемого блюда START***"""
+    """***START Обработки колбэка от клавиатуры с обновляемой кнопкой количества заказываемого блюда START***"""
     global count  # используем глобальную переменную для количества добавляемого в корзину блюда
     bot.answer_callback_query(call.id)  # подтверждаем нажатие
     if call.data.split(':')[1] == "minus":  # если нажата кнопка "-"
@@ -221,7 +221,7 @@ def query_handler(call):
         count += 1  # увеличиваем количество на один
         bot.edit_message_text(f"{result_dish}", call.message.chat.id, call.message.message_id,
                               reply_markup=create_keyboard())  # обновляем сообщение с клавиатурой
-    """***END Обрабаботки колбэка от клавиатуры с обновляемой кнопкой количества заказываемого блюда END***"""
+    """***END Обработки колбэка от клавиатуры с обновляемой кнопкой количества заказываемого блюда END***"""
 
     global dict_info_dish_id
     client_id = int(call.message.chat.id)
@@ -250,16 +250,31 @@ def query_handler(call):
                 result += f'Блюдо: {j[1]}\n'
         bot.send_message(call.message.chat.id, f'{result} Цена:{total_price}')
 # END_______________________________________________________________________________________________code serezha
-
     if call.data.split(':')[1] == "b3":
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Sub_inline_keyb)
+
+    """___Обработка коллбэка от кнопки 'О нас'___"""
     if call.data.split(':')[1] == "txt2":
         global Reviews_inline_keyb
         Reviews_inline_keyb = InlineKeyboardMarkup()
-        Reviews_inline_keyb.add(InlineKeyboardButton("Отзывы о сервисе", callback_data="review:r1"))
-        Reviews_inline_keyb.add(InlineKeyboardButton("Отзывы о еде", callback_data="review:r2"))
+        Reviews_inline_keyb.add(InlineKeyboardButton("Отзывы о ресторане", callback_data="review:r1"))
+        # Reviews_inline_keyb.add(InlineKeyboardButton("Отзывы о еде", callback_data="review:r2"))
         Reviews_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
-        bot.send_message(call.message.chat.id, "Выбирайте", reply_markup=Reviews_inline_keyb)
+        about_restaurant = f"Здравствуйте, уважаемые Гости!\n «Лiтвiны» — ресторан современной белорусской кухни." \
+                           f"В средние века предков белорусов называли литвинами.Трудолюбивое и любознательное население" \
+                           f" из века в век выращивало рожь, овощи, фрукты. Все, что водилось в реках, озёрах, на болотах," \
+                           f" в лесах, разнообразило питание.\nКонечно, мы учитываем современные тренды, но стараемся " \
+                           f"использовать их именно в нашем национальном прочтении.\nМы стараемся, чтобы в наших " \
+                           f"ресторанах восхищались гости нашей страны и гордились белорусы." \
+                           f""
+        info_rest = f"ТЦ Green City\n" \
+                    f"Телефон: +375 44 519-11-11\n" \
+                    f"Время работы: 11:00-23:00\n" \
+                    f"Метро: Каменная горка\n" \
+                    f"Адрес: Минск, ул. Притыцкого, 156/1\n"
+        url_rest = "\U0001F30D https://litviny.by/rus/about"
+        url2_rest = "https://www.instagram.com/litviny.by/"
+        bot.send_message(call.message.chat.id, f"{about_restaurant}\n{info_rest}\nСайт: {url_rest}\n\nInstagram: {url2_rest}", parse_mode="Markdown", reply_markup=Reviews_inline_keyb)
     if call.data.split(':')[1] == "r1":
         AfterReview_inline_keyb = InlineKeyboardMarkup()
         AfterReview_inline_keyb.add(InlineKeyboardButton("Оставить отзыв", callback_data="feedback:r3"))
@@ -269,29 +284,29 @@ def query_handler(call):
         for key, value in review_order_dict.items():
             result_card += f"\U0001F5E8{client_dict[value]}: '{key}'\n\n"
         bot.send_message(call.message.chat.id, f"{result_card}", reply_markup=AfterReview_inline_keyb)
-    if call.data.split(':')[1] == "r2":
-        # Создаем клавиатуру и кнопки для блюд с отзывами
-        global ReviewDish_inline_keyb
-        ReviewDish_inline_keyb = InlineKeyboardMarkup()
-        [ReviewDish_inline_keyb.add(InlineKeyboardButton(key, callback_data=f"r{key}:{value}r")) for key, value in
-         dish_dict2.items() if value in dish_id]
-        ReviewDish_inline_keyb.add(InlineKeyboardButton("Оставить отзыв", callback_data="feedback:r3"))
-        ReviewDish_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
-        ReviewDish_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:txt2"))
-        bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=ReviewDish_inline_keyb)
-    print(call.data.split(':'))
-    if call.data.split(':')[1][:-1] in review_dish_dict:  # callback от клавиатуры и кнопок ReviewDish_inline_keyb - блюда с отзывами, напр.: ["rДеруны", "7r"], где 7 - это id блюда
-        result_card = ""
-        for key, value in review_dish_dict.items():
-            if key == call.data.split(':')[1][:-1]:
-                result_card += f"\U0001F5E8{review_dish_dict[call.data.split(':')[1][:-1]]}\n"
-        AfterReviewDish_inline_keyb = InlineKeyboardMarkup()
-        AfterReviewDish_inline_keyb.add(InlineKeyboardButton("Оставить отзыв", callback_data="feedback:r3"))
-        AfterReviewDish_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
-        AfterReviewDish_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="review:r2"))
-        with open("photo/" + call.data.split(':')[1][:-1] + ".jpg", "rb") as img:  # calldata - id блюда и название соотв-й картинки этого блюда
-            bot.send_photo(call.message.chat.id, photo=img)
-        bot.send_message(call.message.chat.id, f"{result_card}", reply_markup=AfterReviewDish_inline_keyb)
+    # if call.data.split(':')[1] == "r2":
+    #     # Создаем клавиатуру и кнопки для блюд с отзывами
+    #     global ReviewDish_inline_keyb
+    #     ReviewDish_inline_keyb = InlineKeyboardMarkup()
+    #     [ReviewDish_inline_keyb.add(InlineKeyboardButton(key, callback_data=f"r{key}:{value}r")) for key, value in
+    #      dish_dict2.items() if value in dish_id]
+    #     ReviewDish_inline_keyb.add(InlineKeyboardButton("Оставить отзыв", callback_data="feedback:r3"))
+    #     ReviewDish_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
+    #     ReviewDish_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:txt2"))
+    #     bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=ReviewDish_inline_keyb)
+    # print(call.data.split(':'))
+    # if call.data.split(':')[1][:-1] in review_dish_dict:  # callback от клавиатуры и кнопок ReviewDish_inline_keyb - блюда с отзывами, напр.: ["rДеруны", "7r"], где 7 - это id блюда
+    #     result_card = ""
+    #     for key, value in review_dish_dict.items():
+    #         if key == call.data.split(':')[1][:-1]:
+    #             result_card += f"\U0001F5E8{review_dish_dict[call.data.split(':')[1][:-1]]}\n"
+    #     AfterReviewDish_inline_keyb = InlineKeyboardMarkup()
+    #     AfterReviewDish_inline_keyb.add(InlineKeyboardButton("Оставить отзыв", callback_data="feedback:r3"))
+    #     AfterReviewDish_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
+    #     AfterReviewDish_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="review:r2"))
+    #     with open("photo/" + call.data.split(':')[1][:-1] + ".jpg", "rb") as img:  # calldata - id блюда и название соотв-й картинки этого блюда
+    #         bot.send_photo(call.message.chat.id, photo=img)
+    #     bot.send_message(call.message.chat.id, f"{result_card}", reply_markup=AfterReviewDish_inline_keyb)
     if call.data.split(':')[1] == "r3":
         MakeReviewError_inline_keyb = InlineKeyboardMarkup()
         MakeReviewError_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
