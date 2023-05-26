@@ -3,19 +3,24 @@ from telebot import types
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from telebot.types import InputMediaPhoto
 import sqlite3
+import os
 import array
 import gspread
 import requests
 import subprocess
-import os
 import datetime
 import uuid
 
 # logfile = str(datetime.date.today()) + '.log' # формируем имя лог-файла
 token = '6112420224:AAFd0gDtUiAC2qqWo4osq82D6qyGH07c_UY'
 bot = telebot.TeleBot(token)
-
 conn = sqlite3.connect('restaurant1.db', check_same_thread=False)
+markdown = """
+    *bold text*
+    _italic text_
+    [text](URL)
+    """
+
 with conn:
     cursor = conn.cursor()
     cursor.execute(f"SELECT * FROM CategoryDish")
@@ -44,15 +49,13 @@ with conn:
 # print(subcat_dict3)
 
 with conn:
-    data = conn.execute("SELECT * FROM Clients")
-    # print(data.fetchall())
+    global client_id
     clients_telegram_id = [i[4] for i in conn.execute(f"SELECT * FROM Clients")]
-    print(clients_telegram_id)
+    print("айди телеги юзеров", clients_telegram_id)
 
 with conn:
     orders_telegram_id = [i[5] for i in conn.execute(f"SELECT * FROM Orders")]
     orders_datetime = [i[4] for i in conn.execute(f"SELECT * FROM Orders")]
-
     print(type(orders_telegram_id[0]), orders_telegram_id)
 
 with conn:
@@ -66,7 +69,6 @@ with conn:
     dish_ids = [str(i[0]) for i in conn.execute(f"SELECT * FROM Dish")]
     dish_dict2 = dict(zip(dish_names, dish_ids))
     dish_dict = dict(zip(dish_names, dish_cat_ids))
-    # dish_all_dict = dict(zip(dish_names, [[i[1],i[2], i[3], i[4],i[5], i[6], i[7], i[9]] for i in conn.execute(f"SELECT * FROM Dish")]))
     dish_all_dict = dict(zip(dish_names, [[i[1],i[2], i[3], i[4],i[5], i[6], i[7], i[9], i[0]] for i in conn.execute(f"SELECT * FROM Dish")]))
 
 
@@ -80,8 +82,9 @@ with conn:
     review_dish = [i[2] for i in conn.execute(f"SELECT * FROM Reviews")]
     client_id = [i[3] for i in conn.execute(f"SELECT * FROM Reviews")]
     orders_id = [i[4] for i in conn.execute(f"SELECT * FROM Reviews")]
+    print("qqqqqqqqq", review_order, client_id)
     dish_id = [str(i[5]) for i in conn.execute(f"SELECT * FROM Reviews")]
-    review_order_dict = dict(zip(review_order, client_id))
+    review_order_dict = dict(zip(review_order[-3:-1], client_id[-3:-1]))  # можно корректировать индексами количество выводимых отзывов
     print(review_order_dict)
     review_dish_dict = dict(zip(dish_id, review_dish))
     print(review_dish_dict)
@@ -103,7 +106,7 @@ Main_inline_keyb.add(InlineKeyboardButton("Меню ресторана", callbac
 Main_inline_keyb.add(InlineKeyboardButton("Моя корзина", callback_data="menu:txt3"))
 Main_inline_keyb.add(InlineKeyboardButton("Мои заказы", callback_data="menu:txt4"))
 Main_inline_keyb.add(InlineKeyboardButton("О нас", callback_data="menu:txt2"))
-Main_inline_keyb.add(InlineKeyboardButton("Профиль пользователя", callback_data="menu:txt6"))
+Main_inline_keyb.add(InlineKeyboardButton("Профиль пользователя", callback_data="menu:profile"))
 
 
 """***START Функция для создания клавиатуры с обновляемой кнопкой количества заказываемого блюда START***"""
@@ -119,10 +122,9 @@ def create_keyboard():  # функция для создания клавиат�
 """***END Функция для создания клавиатуры с обновляемой кнопкой количества заказываемого блюда END***"""
 
 
-@bot.message_handler(content_types=['text'])
+@bot.message_handler(commands=['start'])
 def start(message):
-    if message.text.lower() == '/start':
-        bot.send_message(message.chat.id, '''Добро пожаловать в чат-бот "FoodBot". Здесь Вы можете заказать еду по вкусу из ресторана "Літвіны".\nЧто Вас интересует?''', reply_markup=Main_inline_keyb)
+    bot.send_message(message.chat.id, '''Добро пожаловать в чат-бот "FoodBot". Здесь Вы можете заказать еду по вкусу из ресторана "Літвіны".\nЧто Вас интересует?''', reply_markup=Main_inline_keyb)
     global user_telegram_id
     user_telegram_id = message.from_user.id
     print(type(user_telegram_id), message.from_user.id)
@@ -252,7 +254,6 @@ def query_handler(call):
 # END_______________________________________________________________________________________________code serezha
     if call.data.split(':')[1] == "b3":
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Sub_inline_keyb)
-
     """___Обработка коллбэка от кнопки 'О нас'___"""
     if call.data.split(':')[1] == "txt2":
         global Reviews_inline_keyb
@@ -260,6 +261,16 @@ def query_handler(call):
         Reviews_inline_keyb.add(InlineKeyboardButton("Отзывы о ресторане", callback_data="review:r1"))
         # Reviews_inline_keyb.add(InlineKeyboardButton("Отзывы о еде", callback_data="review:r2"))
         Reviews_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
+        """START ФОТКИ интерьера рестика, использование метода send_media_group: 
+        # получаем полный путь к файлу 
+        # создаем список объектов InputMediaPhoto 
+        # открываем файл в режиме чтения байтов и добавляем в список
+        """
+        files = os.listdir("photorest")
+        photos = [file for file in files if file.endswith(".jpg")]  # фильтруем файлы по расширению .jpg
+        media = [InputMediaPhoto(open(os.path.join("photorest", photo), "rb")) for photo in photos]
+        bot.send_media_group(call.message.chat.id, media)
+        """END ФОТКИ интерьера рестика"""
         about_restaurant = f"Здравствуйте, уважаемые Гости!\n «Лiтвiны» — ресторан современной белорусской кухни." \
                            f"В средние века предков белорусов называли литвинами.Трудолюбивое и любознательное население" \
                            f" из века в век выращивало рожь, овощи, фрукты. Все, что водилось в реках, озёрах, на болотах," \
@@ -279,7 +290,6 @@ def query_handler(call):
         AfterReview_inline_keyb = InlineKeyboardMarkup()
         AfterReview_inline_keyb.add(InlineKeyboardButton("Оставить отзыв", callback_data="feedback:r3"))
         AfterReview_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
-        AfterReview_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:txt2"))
         result_card = ""
         for key, value in review_order_dict.items():
             result_card += f"\U0001F5E8{client_dict[value]}: '{key}'\n\n"
@@ -311,27 +321,46 @@ def query_handler(call):
         MakeReviewError_inline_keyb = InlineKeyboardMarkup()
         MakeReviewError_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
         MakeReviewError_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:txt2"))
-        MakeReviewSuccess_inline_keyb = InlineKeyboardMarkup()
-        MakeReviewSuccess_inline_keyb.add(InlineKeyboardButton("Отзыв на заказ", callback_data="feedback:r4"))
-        MakeReviewSuccess_inline_keyb.add(InlineKeyboardButton("Отзыв на блюдо", callback_data="feedback:r5"))
+        # MakeReviewSuccess_inline_keyb = InlineKeyboardMarkup()
+        # MakeReviewSuccess_inline_keyb.add(InlineKeyboardButton("Отзыв на заказ", callback_data="feedback:r4"))
+        # MakeReviewSuccess_inline_keyb.add(InlineKeyboardButton("Отзыв на блюдо", callback_data="feedback:r5"))
         if user_telegram_id in orders_telegram_id:
             print("clients id telegram", user_telegram_id)
             #кнопка оставить отзыв на заказ
             #кнопка оставить отзыв на блюдо
-            bot.send_message(call.message.chat.id, "Выбрать:", reply_markup=MakeReviewSuccess_inline_keyb)
-
-            # bot.answer_callback_query(call.id)  # подтвердить нажатие
-            # bot.send_message(call.message.chat.id, "Как вы оцениваете работу ресторана и блюдо, которое вы заказали?",
-            #              reply_markup=telebot.types.ForceReply())  # спросить пользователя о его отзыве
+            # bot.send_message(call.message.chat.id, "Выбрать:", reply_markup=MakeReviewSuccess_inline_keyb)
+            bot.answer_callback_query(call.id)  # подтвердить нажатие
+            bot.send_message(call.message.chat.id, "Как вы оцениваете работу ресторана?", reply_markup=telebot.types.ForceReply())  # спрашиваем пользователя о его отзыве
         else:
             bot.send_message(call.message.chat.id, "Оставить отзыв о работе ресторана Вы сможете после оформления заказа с помощью нашаего чат-бота. Спасибо!",
                              reply_markup=MakeReviewError_inline_keyb)  # выдать клаву если пользователь ранее не делал заказов
-    if call.data.split(':')[1] == "r4":
-        ClientOrders_inline_keyb = InlineKeyboardMarkup()
-        [ClientOrders_inline_keyb.add(InlineKeyboardButton(date_info, callback_data=f"{date_info}")) for date_info in orders_datetime]
-        ClientOrders_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
-        ClientOrders_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:txt2"))
-        bot.send_message(call.message.chat.id, "Вот все Ваши заказы. Выберите тот, на который хотите оставить отзыв:", reply_markup=ClientOrders_inline_keyb)
+    # if call.data.split(':')[1] == "r4":
+    #     ClientOrders_inline_keyb = InlineKeyboardMarkup()
+    #     [ClientOrders_inline_keyb.add(InlineKeyboardButton(date_info, callback_data=f"{date_info}")) for date_info in orders_datetime]
+    #     ClientOrders_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
+    #     ClientOrders_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:txt2"))
+    #     bot.send_message(call.message.chat.id, "Вот все Ваши заказы. Выберите тот, на который хотите оставить отзыв:", reply_markup=ClientOrders_inline_keyb)
+
+
+
+
+# обработка ответа пользователя на вопрос о его отзыве на работу ресторана с последующей запись в БД
+@bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text == "Как вы оцениваете работу ресторана?")
+def handle_review_answer(message):
+    client_id = [i[0] for i in conn.execute(f"SELECT id FROM Clients WHERE telegram_id = {user_telegram_id}")][0]
+    orders_id = [i[0] for i in conn.execute(f"SELECT id FROM Orders WHERE telegram_id = {user_telegram_id}")][-1] # id последнего заказа из БД
+    print("айди юзера", client_id, "id последнего заказа из БД", orders_id)
+    dish_id = None
+    review_order = message.text  # текст отзыва пользователя
+    review_dish = ""
+    with conn:
+        conn.execute("INSERT INTO Reviews (review_order, review_dish, client_id, orders_id, dish_id) VALUES (?, ?, ?, ?, ?)",
+                     (review_order, review_dish, client_id, orders_id, dish_id)) # добавьте новую запись в таблицу "Отзывы"
+    conn.commit()  # сохраняем изменения в базе данных
+    bot.send_message(message.chat.id, "Спасибо за Ваш отзыв!", reply_markup=Main_inline_keyb)
+
+
+
 
 
 
