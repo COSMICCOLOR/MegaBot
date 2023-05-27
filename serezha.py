@@ -15,7 +15,7 @@ import uuid
 token = '5991850571:AAGwpP8X-kv-nN0P55SciR2sMxCvLkGOeuU'
 bot = telebot.TeleBot(token)
 
-conn = sqlite3.connect('restaurant1.db', check_same_thread=False)
+conn = sqlite3.connect('DATABASE/restaurant1.db', check_same_thread=False)
 
 
 
@@ -25,7 +25,8 @@ with conn:
     data = cursor.fetchall()  # fetchone
     column_names = [i[1] for i in conn.execute(f"SELECT * FROM CategoryDish")]
     column_ids = [i[0] for i in conn.execute(f"SELECT * FROM CategoryDish")]
-    column_dict = dict(zip(column_names, column_ids))
+    shopping_count_dish = [i[4] for i in conn.execute(f"SELECT * FROM ShoppingCart")]
+    column_dict = dict(zip(column_names, f'{column_ids}:{shopping_count_dish}'))
 # print(column_names)
 # print(column_ids)
 # print(column_dict)
@@ -121,6 +122,7 @@ def create_keyboard():  # функция для создания клавиат�
 """***END Функция для создания клавиатуры с обновляемой кнопкой количества заказываемого блюда END***"""
 
 
+
 @bot.message_handler(content_types=['text'])
 def start(message):
     if message.text.lower() == '/start':
@@ -162,12 +164,14 @@ def adress(message):
             f'SELECT ShoppingCart.dish_id FROM ShoppingCart WHERE ShoppingCart.client_id = {message.chat.id}')]
             # print(list_orders_dish)
             # print(list_orders_dish)
+            j=0
             for i in list_orders_dish:
                 print(i)
-                dish_ids += str(i)
+                count_orders = [i[0] for i in conn.execute(f"SELECT ShoppingCart.dish_count FROM ShoppingCart WHERE {int(i)} =ShoppingCart.dish_id")][0]
+                dish_ids += str(i)+ ':' +str(count_orders)+', '
+                j+=1
             conn.execute(orders_table, [name, dish_ids])
         conn.commit()
-
 
 @bot.callback_query_handler(func=lambda call: call.data.split(":"))
 def query_handler(call):
@@ -269,10 +273,12 @@ def query_handler(call):
     client_id = int(call.message.chat.id)
     if call.data.split(':')[1] == 'basket':
         dict_info_dish_id = int(dish_ids[0])
-        print(dict_info_dish_id, type(dict_info_dish_id))
+
+        price_dish = [i[0] for i in conn.execute(f"SELECT price FROM Dish WHERE id ={dict_info_dish_id}")][0]
         cart = "INSERT OR IGNORE INTO ShoppingCart (client_id, dish_id, total_price, dish_count) values(?, ?, ?, ?)"
+        total_price_dish = float(count*price_dish)
         with conn:
-            conn.execute(cart, [client_id, dict_info_dish_id, 5.0, count])
+            conn.execute(cart, [client_id, dict_info_dish_id, total_price_dish, count])
         conn.commit()
 
     if call.data.split(':')[1] == 'buy':
