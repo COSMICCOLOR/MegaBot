@@ -145,6 +145,45 @@ def start(message):
     user_telegram_id = message.from_user.id
     # print(type(user_telegram_id), message.from_user.id)
 
+@bot.message_handler(content_types=['text'])
+def user(message):
+    global user_name
+    if message.text != '':
+        user_name = message.text
+        msg = bot.send_message(message.chat.id, 'Отлично,введите ваш телефон!')
+        bot.register_next_step_handler(msg, phone)
+
+def phone(message):
+    global phone
+    if message.text.startswith('+375'):
+        phone = message.text
+        msg = bot.send_message(message.chat.id, 'Отлично,введите ваш адрес!')
+        bot.register_next_step_handler(msg, adress)
+
+
+def adress(message):
+    if message.text != '':
+        adress = message.text
+        bot.send_message(message.chat.id, 'Ваша заявка оформлена! Ожидайте Ваш заказ :)')
+        clients_table = "INSERT OR IGNORE INTO Clients (name,phone_number, delivery_adress, telegram_id) values(?, ?, ?, ?)"
+        orders_table = "INSERT OR IGNORE INTO Orders (client_id,dish_ids) values(?, ?)"
+        with conn:
+            conn.execute(clients_table, [str(user_name), str(phone), str(adress), int(message.chat.id)])
+            dish_ids = ''
+            name =f'{message.chat.id}'
+            list_orders_dish = [i[0] for i in conn.execute(
+            f'SELECT ShoppingCart.dish_id FROM ShoppingCart WHERE ShoppingCart.client_id = {message.chat.id}')]
+            # print(list_orders_dish)
+            # print(list_orders_dish)
+            j=0
+            for i in list_orders_dish:
+                print(i)
+                count_orders = [i[0] for i in conn.execute(f"SELECT ShoppingCart.count FROM ShoppingCart WHERE {int(i)} =ShoppingCart.dish_id")][0]
+                dish_ids += str(i)+ ':' +str(count_orders)+', '
+                j+=1
+            conn.execute(orders_table, [name, dish_ids])
+        conn.commit()
+
 
 @bot.callback_query_handler(func=lambda call: call.data.split(":"))
 def query_handler(call):
@@ -180,6 +219,8 @@ def query_handler(call):
         Dish_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
         Dish_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:b3"))
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Dish_inline_keyb)
+
+
 #START code serezha________________________________
     global dish_ids
     global dish_names
@@ -191,9 +232,9 @@ def query_handler(call):
         dish_names = dish_all_dict[call.data.split(':')[0]][0]
         global result_dish  # формируем карточку блюда и отправляем юзеру с клавиатурой для заказа и добавления в корзину
         result_dish = f"{call.data.split(':')[0]}\n" \
-                      f"Описание:{dish_all_dict[call.data.split(':')[0]][1]}\n" \
+                      f"Описание: {dish_all_dict[call.data.split(':')[0]][1]}\n" \
                       f"Цена: {dish_all_dict[call.data.split(':')[0]][3]}BYN (В упаковке вы увидите  {dish_all_dict[call.data.split(':')[0]][7]}шт.)\n" \
-                      f"Вес:{dish_all_dict[call.data.split(':')[0]][5]}{dish_all_dict[call.data.split(':')[0]][6]}\n" \
+                      f"Вес: {dish_all_dict[call.data.split(':')[0]][5]}{dish_all_dict[call.data.split(':')[0]][6]}\n" \
                       f"Время приготовления: {dish_all_dict[call.data.split(':')[0]][4]} миунут!\n"
         with open("photo/" + dish_all_dict[call.data.split(':')[0]][2], "rb") as img:  # calldata - id блюда и название соотв-й картинки этого блюда
             bot.send_photo(call.message.chat.id, photo=img)
@@ -214,13 +255,29 @@ def query_handler(call):
     global dict_info_dish_id
     client_id = int(call.message.chat.id)
     if call.data.split(':')[1] == 'basket':
+        # bot.answer_callback_query(call.id)
+        # user_id = call.from_user.id  # id телеги пользователя
+        # cursor.execute("SELECT * FROM Clients WHERE telegram_id = ?",
+        #                (user_id,))  # проверяем, есть ли запись о пользователе в БД
+        # row = cursor.fetchone()
+        # if row is None:  # если нет, то просим пользователя ввести свои данные/зарегистрироваться
+
         dict_info_dish_id = int(dish_ids[0])
-        print(dict_info_dish_id, type(dict_info_dish_id))
-        cart = "INSERT OR IGNORE INTO ShoppingCart (client_id, dish_id, total_price) values(?, ?, ?)"
+        price_dish = [i[0] for i in conn.execute(f"SELECT price FROM Dish WHERE id ={dict_info_dish_id}")][0]
+        cart = "INSERT OR IGNORE INTO ShoppingCart (client_id, dish_id, total_price, count) values(?, ?, ?, ?)"
+        total_price_dish = float(count * price_dish)
         with conn:
-            conn.execute(cart, [client_id, dict_info_dish_id, 5.0])
+            conn.execute(cart, [client_id, dict_info_dish_id, total_price_dish, count])
         conn.commit()
+        count = 1
     if call.data.split(':')[1] == 'buy':
+        order_after_cart_markup = InlineKeyboardMarkup()
+        order_after_cart_markup.add(InlineKeyboardButton("Выбрать другие блюда", callback_data="menu:b2"))
+        order_after_cart_markup.add(InlineKeyboardButton("В предыдущее меню", callback_data="menu:b3"))
+        order_after_cart_markup.add(InlineKeyboardButton('Оформить заказ', callback_data='0:Оформить заказ'))
+        order_after_cart_markup.add(InlineKeyboardButton('Оставить комментарий к заказу', callback_data='1:Оставить комментарий'))
+        order_after_cart_markup.add(InlineKeyboardButton('Очистить корзину', callback_data='2:clear basket'))
+        order_after_cart_markup.add(InlineKeyboardButton("Вернуться в главное меню", callback_data="menu:b1"))
         sravnenie_ids = [i[0] for i in cursor.execute(
             f'SELECT ShoppingCart.dish_id FROM ShoppingCart WHERE ShoppingCart.client_id = {client_id}')]
         info = []
@@ -229,14 +286,20 @@ def query_handler(call):
             infos = [i for i in dish_name_cart]
             info.append(infos)
         print(info)
-        result = ""
+        result = "Вы добавили в корзину:\n\n" \
+                 "Блюдо:\U0001F447  (Цена за 1 шт.:\U0001F447 Кол-во:\U0001F447)\n"
         total_price = 0
         for i in info:
             for j in i:
                 total_price += j[4]
-                result += f'Блюдо: {j[1]}\n'
-        bot.send_message(call.message.chat.id, f'{result} Цена:{total_price}')
+                result += f'{j[1]}  ({j[4]} р., count шт.)\n'
+        bot.send_message(call.message.chat.id, f'{result}\nОбщая стоимость: {total_price} р.\u2705', reply_markup=order_after_cart_markup)
+    if call.data.split(':')[1] == 'Оформить заказ':
+        msg = bot.send_message(call.message.chat.id, 'Введите Ваше имя:')
+        bot.register_next_step_handler(msg, user)
 # END code serezha_______________________________________________________________________________________________
+
+
     if call.data.split(':')[1] == "b3":
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Sub_inline_keyb)
     """___Обработка коллбэка от кнопки 'О нас'___"""
@@ -424,6 +487,8 @@ def handle_reg_answer(message):
     if reg_field == 'delivery_adress':
         reg_delivery_adress = message.text
     bot.send_message(message.chat.id, f'''Вы успешно изменили поле "{reg_field_dict[reg_field]}".\nЗаполните все поля формы и сохраните данные:''', reply_markup=create_registration_keyb())
+
+
 
 print("Ready")
 bot.infinity_polling(none_stop=True, interval=0)
