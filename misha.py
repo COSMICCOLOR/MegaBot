@@ -131,10 +131,10 @@ def create_keyboard():  # функция для создания клавиат�
 
 
 # Создаем клавиатуру и кнопки для главного меню и АДМИН-панели
-admin_inline_keyb = InlineKeyboardMarkup()
-admin_inline_keyb.add(InlineKeyboardButton("Добавление администратора", callback_data="admin:addadmin"))
-admin_inline_keyb.add(InlineKeyboardButton("Удаление администратора", callback_data="admin:deladmin"))
-admin_inline_keyb.add(InlineKeyboardButton("Редактирование администратора", callback_data="admin:redadmin"))
+admin_keyb = InlineKeyboardMarkup()
+admin_keyb.add(InlineKeyboardButton("Добавление администратора➕", callback_data="admin:addadmin"))
+admin_keyb.add(InlineKeyboardButton("Удаление администратора➖", callback_data="admin:deladmin"))
+admin_keyb.add(InlineKeyboardButton("Редактирование администратора🛠️", callback_data="admin:redadmin"))
 
 @bot.message_handler(content_types=['text'])
 def start(message) :
@@ -144,16 +144,15 @@ def start(message) :
                          reply_markup=Main_inline_keyb)
 
     if message.text.lower() == '/addadmin':
-
-        user_id = message.from_user.id  # id телеги пользователя
-        #print(user_id)
-        with conn:
-            row = [i[1] for i in conn.execute("SELECT * FROM BotAdmins")]
-
-        if user_id not in row :  # проверяем id на пригодность
-            bot.send_message(message.chat.id, "Вы не являетесь администратором.", reply_markup=Main_inline_keyb)
-        else :  # если есть, то показываем админу клаву для управления админкой
-            bot.send_message(message.chat.id, '''Добро пожаловать в админ-панель "FoodBot". Здесь Вы можете изменить меню и просмотреть отзывы ресторана "Літвіны"''', reply_markup=admin_inline_keyb)
+        # user_id = message.from_user.id  # id телеги пользователя
+        # print(user_id)
+        # with conn:
+        #     row = [i[1] for i in conn.execute("SELECT * FROM BotAdmins")]
+        #
+        # if user_id not in row :  # проверяем id на пригодность
+        #     bot.send_message(message.chat.id, "Вы не являетесь администратором.\nВыберите лучше покушать\U0001F609 ", reply_markup=Main_inline_keyb)
+        # else :  # если есть, то показываем админу клаву для управления админкой
+            bot.send_message(message.chat.id, '''Добро пожаловать в админ-панель "FoodBot". Здесь Вы можете изменить меню и просмотреть отзывы ресторана "Літвіны"''', reply_markup=admin_keyb)
     global user_telegram_id
     user_telegram_id = message.from_user.id
     print(type(user_telegram_id), message.from_user.id)
@@ -375,15 +374,40 @@ def query_handler(call):
     #     ClientOrders_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
     #     ClientOrders_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:txt2"))
     #     bot.send_message(call.message.chat.id, "Вот все Ваши заказы. Выберите тот, на который хотите оставить отзыв:", reply_markup=ClientOrders_inline_keyb)
-    if call.data.split(':')[1] == "addadmin": #клава для добасления админа
+    global addm_adminname, addm_adminlast, addm_adminphone, addm_adminpos
+    addm_adminname = "Имя"
+    addm_adminlast = "Фамилия"
+    addm_adminphone = "Номер телефона"
+    addm_adminpos= "Должность"
+    if call.data.split(':')[1] == "addadmin": #клава для добавления админа
         add_inline_keyb = InlineKeyboardMarkup()
-        add_inline_keyb.add(InlineKeyboardButton("Имя", callback_data="addm:adminname"))
-        add_inline_keyb.add(InlineKeyboardButton("Фамилия ", callback_data="addm:adminlast"))
-        add_inline_keyb.add(InlineKeyboardButton("Номер телефона", callback_data="addm:adminphone"))
-        add_inline_keyb.add(InlineKeyboardButton("Должность", callback_data="addm:adminpos"))
-        bot.send_message(call.message.chat.id, "Добавьте данные о новом администраторе", reply_markup= add_inline_keyb)
+        add_inline_keyb.add(InlineKeyboardButton("Имя💎", callback_data="addm:adminname"))
+        add_inline_keyb.add(InlineKeyboardButton("Фамилия👑", callback_data="addm:adminlast"))
+        add_inline_keyb.add(InlineKeyboardButton("Номер телефона📱", callback_data="addm:adminphone"))
+        add_inline_keyb.add(InlineKeyboardButton("Должность🤵", callback_data="addm:adminpos"))
+        add_inline_keyb.add(InlineKeyboardButton("Сохранить\u2705", callback_data="addm:adminsave"))
+        add_inline_keyb.add(InlineKeyboardButton("Вернуться назад↩ ", callback_data="addm:backmenu"))
+        bot.send_message(call.message.chat.id, "Добавьте данные о новом администраторе", reply_markup=add_inline_keyb)
+    if call.data.split(':')[1] == "backmenu" :
+        bot.send_message(call.message.chat.id, "Добавьте данные о новом администраторе", reply_markup=admin_keyb)
+    #
+    # if addm_adminname != "Указать имя" and addm_adminlast != "Указать Фамилию" and len(addm_adminphone) == 13 and addm_adminpos != "Должность":
+    #     Success_reg_inline_keyb = InlineKeyboardMarkup()
+    #     Success_reg_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="add_inline_keyb"))
+    #     bot.answer_callback_query(call.id)
+    #     bot.send_message(call.message.chat.id, f"Вы успешно прошли регистрацию.\n"
+    #                                            f"Ваш профиль:\n"
+    #                                            f"Имя: {addm_adminname}\n"
+    #                                            f"Фамилия: {addm_adminlast}\n"
+    #                                            f"Телефон: {addm_adminphone}\n"
+    #                                            f"Должность: {addm_adminpos}\n\n",
+    #                      reply_markup=admin_keyb)
 
-        print("админ добавлен")
+
+
+
+
+
 
 
 

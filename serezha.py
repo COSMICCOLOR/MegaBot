@@ -1,3 +1,5 @@
+import time
+
 import telebot
 from telebot import types
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -15,7 +17,8 @@ markdown = """
     _italic text_
     [text](URL)
     """
-
+dish_sl = [i[1] for i in conn.execute(f"SELECT * FROM Dish")]
+print(dish_sl)
 with conn:
     cursor = conn.cursor()
     cursor.execute(f"SELECT * FROM CategoryDish")
@@ -59,6 +62,7 @@ with conn:
     cursor = conn.cursor()
     cursor.execute(f"SELECT * FROM Dish")
     data2 = cursor.fetchall()  # fetchone
+
     dish_names = [i[1] for i in conn.execute(f"SELECT * FROM Dish")]
     dish_cat_ids = [str(i[11]) for i in conn.execute(f"SELECT * FROM Dish")]
     dish_ids = [str(i[0]) for i in conn.execute(f"SELECT * FROM Dish")]
@@ -164,7 +168,8 @@ def phone(message):
 def adress(message):
     if message.text != '':
         adress = message.text
-        bot.send_message(message.chat.id, 'Ваша заявка оформлена! Ожидайте Ваш заказ :)')
+        global msg
+        msg = bot.send_message(message.chat.id, 'Ваша заявка оформлена! Ожидайте Ваш заказ :)')
         clients_table = "INSERT OR IGNORE INTO Clients (name,phone_number, delivery_adress, telegram_id) values(?, ?, ?, ?)"
         orders_table = "INSERT OR IGNORE INTO Orders (client_id,dish_ids) values(?, ?)"
         with conn:
@@ -178,10 +183,11 @@ def adress(message):
             j=0
             for i in list_orders_dish:
                 print(i)
-                count_orders = [i[0] for i in conn.execute(f"SELECT ShoppingCart.dish_count FROM ShoppingCart WHERE {int(i)} =ShoppingCart.dish_id")][0]
+                count_orders = [i[0] for i in conn.execute(f"SELECT ShoppingCart.dish_count FROM ShoppingCart WHERE {int(i)} = ShoppingCart.dish_id")][0]
                 dish_ids += str(i)+ ':' +str(count_orders)+', '
                 j+=1
             conn.execute(orders_table, [name, dish_ids])
+            conn.execute(f'DELETE FROM ShoppingCart WHERE client_id = {message.chat.id}')
         conn.commit()
 
 
@@ -277,6 +283,7 @@ def query_handler(call):
         order_after_cart_markup.add(InlineKeyboardButton('Оформить заказ', callback_data='0:Оформить заказ'))
         order_after_cart_markup.add(InlineKeyboardButton('Оставить комментарий к заказу', callback_data='1:Оставить комментарий'))
         order_after_cart_markup.add(InlineKeyboardButton('Очистить корзину', callback_data='2:clear basket'))
+        order_after_cart_markup.add(InlineKeyboardButton('Удалить товар из корзины', callback_data='2:clear basket_dishes'))
         order_after_cart_markup.add(InlineKeyboardButton("Вернуться в главное меню", callback_data="menu:b1"))
         sravnenie_ids = [i[0] for i in cursor.execute(
             f'SELECT ShoppingCart.dish_id FROM ShoppingCart WHERE ShoppingCart.client_id = {client_id}')]
@@ -302,7 +309,22 @@ def query_handler(call):
         msg = bot.send_message(call.message.chat.id, 'Введите Ваше имя:')
         bot.register_next_step_handler(msg, user)
 # END code serezha_______________________________________________________________________________________________
-
+    if call.data.split(':')[1] == 'clear basket_dishes':
+        markup = InlineKeyboardMarkup()
+        [markup.add(InlineKeyboardButton(button_name[0], callback_data=f'{i[0]}:{button_name[0]}')) for button_name in conn.execute('SELECT Dish.name FROM Dish,ShoppingCart WHERE ShoppingCart.dish_id = Dish.id') for i in conn.execute('SELECT Dish.id FROM Dish,'
+                                                                                                                                                                                                                                         'ShoppingCart WHERE ShoppingCart.dish_id = Dish.id')]
+        bot.send_message(call.message.chat.id, 'Выберите товар для удаления из корзины!', reply_markup=markup)
+    if call.data.split(':')[1] in dish_sl:
+        print(call.data.split(":")[0])
+        conn.execute(f'DELETE FROM ShoppingCart WHERE ShoppingCart.dish_id = {call.data.split(":")[0]}')
+    if call.data.split(':')[1] == 'clear basket':
+        with conn:
+            conn.execute(f'DELETE FROM ShoppingCart WHERE client_id = {call.message.chat.id}')
+            # conn.execute(f'DELETE FROM Clients WHERE telegram_id = {message.chat.id}')
+        conn.commit()
+        msg = bot.send_message(call.message.chat.id, 'Корзина успешно очищена!')
+        time.sleep(1)
+        bot.delete_message(call.message.chat.id, msg.message_id)
 
     if call.data.split(':')[1] == "b3":
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Sub_inline_keyb)
