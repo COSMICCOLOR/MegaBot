@@ -5,6 +5,8 @@ from telebot.types import InputMediaPhoto
 import sqlite3
 import os
 import array, gspread, requests, subprocess, datetime, uuid
+import datetime as DT
+
 
 # logfile = str(datetime.date.today()) + '.log' # формируем имя лог-файла
 token = '6112420224:AAFd0gDtUiAC2qqWo4osq82D6qyGH07c_UY'
@@ -129,11 +131,14 @@ def create_edit_button(dct):  # функция для создания кноп�
     return edit_button
 """***END Функция для создания клавиатуры для изменения профиля пользователя END***"""
 
-
-global reg_name, reg_phone_number, reg_delivery_adress  # значения регистрации по умолчанию
-reg_name = "Указать имя"
-reg_phone_number = "Указать телефон"
-reg_delivery_adress = "Указать адрес"
+global field, field_dict
+field_dict = {"name": "Имя", "phone_number": "Телефон", "delivery_adress": "Адрес"}
+field = 'name'
+global reg_name, reg_phone_number, reg_delivery_adress  # значения (данные юзера) при регистрации по умолчанию, к-е будем потом изменять
+reg_name, reg_phone_number, reg_delivery_adress = "Указать имя", "Указать телефон", "Указать адрес"
+global reg_field, reg_field_dict
+reg_field = "name"  # получаем название поля для изменения
+reg_field_dict = {"name": "Имя", "phone_number": "Телефон", "delivery_adress": "Адрес"}
 def create_registration_keyb():  # функция для создания кнопок для регистрации пользователя
     registration_keyb = telebot.types.InlineKeyboardMarkup(row_width=1)
     registration_keyb.add(InlineKeyboardButton(reg_name, callback_data="reg:name"),
@@ -226,7 +231,7 @@ def query_handler(call):
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Dish_inline_keyb)
 
 
-#START code Serezha + partly Dima________________________________
+#START code Serezha + Dima________________________________
     global dish_ids
     global dish_names
     if call.data.split(':')[0] in dish_dict:
@@ -258,7 +263,7 @@ def query_handler(call):
                               reply_markup=create_keyboard())  # обновляем сообщение с клавиатурой
     """***END Обработки колбэка от клавиатуры с обновляемой кнопкой количества заказываемого блюда END***"""
     global dict_info_dish_id
-    client_id = int(call.message.chat.id)
+    client_telegram_id = int(call.message.chat.id)
     if call.data.split(':')[1] in ['basket', 'basket2', "txt3"]:
         if call.data.split(':')[1] == 'basket':
             """Сначала запишем в Корзину БД данные по id telegram независимо от регистрации пользователя в БД в таблице Clients"""
@@ -267,19 +272,18 @@ def query_handler(call):
             cart = "INSERT OR IGNORE INTO ShoppingCart (client_id, dish_id, total_price, count) values(?, ?, ?, ?)"
             total_price_dish = float(count * price_dish)
             with conn:
-                conn.execute(cart, [client_id, dict_info_dish_id, total_price_dish, count])
+                conn.execute(cart, [client_telegram_id, dict_info_dish_id, total_price_dish, count])
             conn.commit()
             count = 1  # сброс количества заказанного блюда в тексте центральной кнопки карточки
         else:  #если basket2, то добавлять нет необх-ти, так как уже до этого добавили, и просто выводим далее корзину
             pass
         """Создаем клавиатуру для корзины после добавления в нее первого блюда"""
         order_after_cart_markup = InlineKeyboardMarkup()
-        order_after_cart_markup.add(InlineKeyboardButton("Добавить другие блюда в корзину\U0001F9FA", callback_data="menu:b2"))
+        order_after_cart_markup.add(InlineKeyboardButton("Добавить блюда в корзину", callback_data="menu:b2"))
         order_after_cart_markup.add(InlineKeyboardButton("Изменить данные профиля \U0001F464", callback_data="edit2:to_profile"))
         order_after_cart_markup.add(InlineKeyboardButton('Оформить заказ \u2705', callback_data='user_basket:Оформить заказ'))
-        order_after_cart_markup.add(InlineKeyboardButton('Оставить комментарий к заказу \U0001F4DD', callback_data='user_basket:Оставить комментарий'))
         order_after_cart_markup.add(InlineKeyboardButton('Очистить корзину \u274C', callback_data='user_basket:clear_basket'))
-        order_after_cart_markup.add(InlineKeyboardButton("В предыдущее меню \U0001F519", callback_data="menu:b3"))
+        order_after_cart_markup.add(InlineKeyboardButton("В предыдущее меню", callback_data="menu:b3"))
         order_after_cart_markup.add(InlineKeyboardButton("Главное меню", callback_data="menu:b1"))
         """Затем проверяем регистрацию пользователя"""
         bot.answer_callback_query(call.id)
@@ -293,16 +297,16 @@ def query_handler(call):
             bot.send_message(call.message.chat.id, "Чтобы пользоваться чат-ботом, нужно пройти регистрацию.",
                              reply_markup=Reg_inline_keyb)
         else:  # если есть, то показываем пользователю его корзину+клавиатуру
-            sravnenie_ids = [i[0] for i in cursor.execute(
-                f'SELECT ShoppingCart.dish_id FROM ShoppingCart WHERE ShoppingCart.client_id = {client_id}')]
+            check_ids = [i[0] for i in cursor.execute(
+                f'SELECT ShoppingCart.dish_id FROM ShoppingCart WHERE ShoppingCart.client_id = {client_telegram_id}')]
             info = []
-            for i in sravnenie_ids:
+            for i in check_ids:
                 dish_name_cart = cursor.execute(f'SELECT * FROM Dish WHERE Dish.id = {i}')
                 infos = [i for i in dish_name_cart]
                 info.append(infos)
             print(info)
             result = "Вы добавили в корзину:\n\n" \
-                     "Блюдо:\U0001F447  (Цена за 1 шт.:\U0001F447 Кол-во:\U0001F447)\n"
+                     "Блюдо:  (Цена за 1 шт., Количество)  \U0001F447\n"
             total_price = 0
             for i in info:
                 for j in i:
@@ -311,18 +315,35 @@ def query_handler(call):
                     with conn:
                         count_dish_cart = [i for i in conn.execute(f'SELECT count FROM ShoppingCart WHERE {j[0]} = ShoppingCart.dish_id')][0][0]
                     # print(count_dish_cart)
-                    result += f'{j[1]}  ({j[4]} р., {count_dish_cart} шт.)\n'
-            # if  если корзина пуста, то вывести соотв сообщение, если не пуста, то
-            bot.send_message(call.message.chat.id, f'{result}\nОбщая стоимость: {total_price} р.\u2705', reply_markup=order_after_cart_markup)
+                    result += f'{j[1]}:  {j[4]} р.,  {count_dish_cart} шт.\n'
+            # если корзина пуста, то выводим соотв-е сообщение, если не пуста, то карточку корзины
+            if len(check_ids) == 0:
+                bot.send_message(call.message.chat.id, "Ваша корзина ещё пуста. Добавьте блюда в корзину.", reply_markup=order_after_cart_markup)
+            else:
+                bot.send_message(call.message.chat.id, f'{result}\nОбщая стоимость: {total_price} р.\u2705', reply_markup=order_after_cart_markup)
+
     if call.data.split(':')[1] == 'Оформить заказ':
-        bot.send_message(call.message.chat.id, 'Ваша заявка оформлена! Ожидайте Ваш заказ :)')
-        orders_table = "INSERT OR IGNORE INTO Orders (client_id,dish_ids) values(?, ?)"
+        Comment_keyb = InlineKeyboardMarkup()
+        Comment_keyb.add(InlineKeyboardButton("Да", callback_data="user_basket:doit"))
+        Comment_keyb.add(InlineKeyboardButton("Нет", callback_data="user_basket:refuse"))
+        bot.send_message(call.message.chat.id, "Хотите добавить комментарий к заказу?", reply_markup=Comment_keyb)
+    if call.data.split(':')[1] == "doit":
+        bot.answer_callback_query(call.id)  # подтверждаем нажатие
+        bot.send_message(call.message.chat.id, "Укажите дополнительную информацию к своему заказу.",
+                         reply_markup=telebot.types.ForceReply())  # просим пользователя оставить коммент
+    if call.data.split(':')[1] == "refuse":
         with conn:
+            client_address = [i[3] for i in conn.execute(f"SELECT * FROM Clients WHERE telegram_id = {call.message.chat.id}")][0]
+        bot.send_message(call.message.chat.id, f'Ваша заявка оформлена! Ожидайте Ваш заказ по адресу: {client_address} :)')
+        orders_table = "INSERT OR IGNORE INTO Orders (client_id, dish_ids, date, telegram_id, comment) values(?, ?, ?, ?, ?)"
+        current_datetime = DT.datetime.now()
+        telegram_id = call.message.chat.id
+        comment = "Без комментария"
+        with conn:
+            client_id = [i[0] for i in conn.execute(f"SELECT * FROM Clients WHERE telegram_id = {call.message.chat.id}")][0]
             dish_ids = ''
-            name = f'{call.message.chat.id}'
             list_orders_dish = [i[0] for i in conn.execute(
                 f'SELECT ShoppingCart.dish_id FROM ShoppingCart WHERE ShoppingCart.client_id = {call.message.chat.id}')]
-            # print(list_orders_dish)
             # print(list_orders_dish)
             j = 0
             for i in list_orders_dish:
@@ -331,9 +352,9 @@ def query_handler(call):
                     f"SELECT ShoppingCart.count FROM ShoppingCart WHERE {int(i)} = ShoppingCart.dish_id")][0]
                 dish_ids += str(i) + ':' + str(count_orders) + ', '
                 j += 1
-            conn.execute(orders_table, [name, dish_ids])
+            conn.execute(orders_table, [client_id, dish_ids, current_datetime, telegram_id, comment])
         conn.commit()
-# END code serezha_______________________________________________________________________________________________
+# END code serezha + Dima_______________________________________________________________________________________________
 
 
     if call.data.split(':')[1] == "b3":
@@ -447,9 +468,10 @@ def query_handler(call):
             bot.send_message(call.message.chat.id,
                              f"Ваш профиль:\nИмя: {name}\nТелефон: {phone}\nАдрес: {address}\n\nВы можете изменить любое из этих полей, нажав на соответствующую кнопку.",
                              reply_markup=create_edit_button(profile_edit_data))
-    global field, field_dict
-    field = call.data.split(':')[1]
-    field_dict = {"name": "Имя", "phone_number": "Телефон", "delivery_adress": "Адрес"}
+
+    if call.data.split(':')[1] in field_dict:
+        global field
+        field = call.data.split(':')[1]
     if call.data.split(':')[0] == "edit":
         bot.answer_callback_query(call.id)  # подтверждаем нажатие
         bot.send_message(call.message.chat.id, f"Введите новое значение для поля '{field_dict[field]}'.", reply_markup=telebot.types.ForceReply())
@@ -460,17 +482,13 @@ def query_handler(call):
         conn.commit()
         bot.answer_callback_query(call.id)  # подтверждаем нажатие
         bot.send_message(call.message.chat.id, "Заполните все поля формы и сохраните данные:", reply_markup=create_registration_keyb())
+    if call.data.split(':')[1] in reg_field_dict:
+        global reg_field
+        reg_field = call.data.split(':')[1]
     if call.data.split(':')[0] == "reg":
         bot.answer_callback_query(call.id)  # подтверждаем нажатие
-        global reg_field, reg_field_dict
-        reg_field = call.data.split(':')[1]  # получаем название поля для изменения
-        reg_field_dict = {"name": "Имя", "phone_number": "Телефон", "delivery_adress": "Адрес"}
         bot.send_message(call.message.chat.id, f"Введите значение для поля '{reg_field_dict[reg_field]}'.", reply_markup=telebot.types.ForceReply())
     if call.data.split(':')[0] == "accept":
-        # save_field = call.data.split(':')[1]
-        # print("1", reg_name)
-        # print("1", reg_phone_number)
-        # print("1", reg_delivery_adress)
         with conn:
             conn.execute("INSERT OR IGNORE INTO Clients (name, phone_number, delivery_adress, telegram_id) values(?, ?, ?, ?)", (reg_name, reg_phone_number, reg_delivery_adress, user_telegram_id))
         conn.commit()
@@ -491,7 +509,7 @@ def query_handler(call):
 
 
 # обработка ответа пользователя на вопрос о его отзыве на работу ресторана с последующей запись в БД
-@bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text == "Как вы оцениваете работу ресторана?")
+@bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Как вы оцениваете работу ресторана?"])
 def handle_review_answer(message):
     client_id = [i[0] for i in conn.execute(f"SELECT id FROM Clients WHERE telegram_id = {user_telegram_id}")][0]
     orders_id = [i[0] for i in conn.execute(f"SELECT id FROM Orders WHERE telegram_id = {user_telegram_id}")][-1] # id последнего заказа из БД
@@ -508,6 +526,7 @@ def handle_review_answer(message):
 # обрабатываем ответ пользователя на вопрос о его имени пользователя/телефоне/адресе {field} при их изменении
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in [f"Введите новое значение для поля '{field_dict[field]}'."])
 def handle_name_answer(message):
+    global field, field_dict
     # message.from_user.id - это telegram id, message.text - введенные пользователем данные
     with conn:
         # добавляем новую запись в таблицу "Clients" с id телеги и именем пользователя/телефоном/адресом {field}
@@ -519,10 +538,6 @@ def handle_name_answer(message):
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in [f"Введите значение для поля '{reg_field_dict[reg_field]}'.", f"Введите корректные данные для всех полей и сохраните данные."])
 def handle_reg_answer(message):
     global reg_name, reg_phone_number, reg_delivery_adress  # значения регистрации по умолчанию
-    # print("2", reg_name)
-    # print("2", reg_phone_number)
-    # print("2", reg_delivery_adress)
-    # print(reg_field)
     if reg_field == 'name':
         reg_name = message.text
     if reg_field == 'phone_number':
@@ -531,43 +546,32 @@ def handle_reg_answer(message):
         reg_delivery_adress = message.text
     bot.send_message(message.chat.id, f'''Вы успешно изменили поле "{reg_field_dict[reg_field]}".\nЗаполните все поля формы и сохраните данные:''', reply_markup=create_registration_keyb())
 
-#
-# @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text == "Введите Ваше имя:")
-# def handle_name_from_basket_answer(message):
-#     global user_name_from_basket
-#     # if message.text == '':
-#     user_name_from_basket = message.text
-#     bot.send_message(message.chat.id, 'Отлично, введите ваш телефон!', reply_markup=telebot.types.ForceReply())
-#
-# @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text == "Отлично,введите ваш телефон!")
-# def handle_name_from_basket_answer(message):
-#     global phone_from_basket
-#     # if message.text.startswith('+375'):
-#     phone_from_basket = message.text
-#     bot.send_message(message.chat.id, 'Отлично, введите ваш адрес!', reply_markup=telebot.types.ForceReply())
-#
-# @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text == "Отлично, введите ваш адрес!")
-# def handle_address_from_basket_answer(message):
-#     address_from_basket = message.text
-#     bot.send_message(message.chat.id, 'Ваша заявка оформлена! Ожидайте Ваш заказ :)')
-#     clients_table = "INSERT OR IGNORE INTO Clients (name,phone_number, delivery_adress, telegram_id) values(?, ?, ?, ?)"
-#     orders_table = "INSERT OR IGNORE INTO Orders (client_id,dish_ids) values(?, ?)"
-#     with conn:
-#         conn.execute(clients_table, [str(user_name_from_basket), str(phone_from_basket), str(address_from_basket), int(message.chat.id)])
-#         dish_ids = ''
-#         name = f'{message.chat.id}'
-#         list_orders_dish = [i[0] for i in conn.execute(
-#         f'SELECT ShoppingCart.dish_id FROM ShoppingCart WHERE ShoppingCart.client_id = {message.chat.id}')]
-#         # print(list_orders_dish)
-#         # print(list_orders_dish)
-#         j = 0
-#         for i in list_orders_dish:
-#             print(i)
-#             count_orders = [i[0] for i in conn.execute(f"SELECT ShoppingCart.count FROM ShoppingCart WHERE {int(i)} = ShoppingCart.dish_id")][0]
-#             dish_ids += str(i) + ':' + str(count_orders)+', '
-#             j += 1
-#         conn.execute(orders_table, [name, dish_ids])
-#     conn.commit()
+
+# обработка ответа пользователя на предложение оставить коммент о текущем заказе с последующей записью в БД Orders
+@bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Укажите дополнительную информацию к своему заказу."])
+def handle_order_answer(message):
+    orders_table = "INSERT OR IGNORE INTO Orders (client_id, dish_ids, date, telegram_id, comment) values(?, ?, ?, ?, ?)"
+    current_datetime = DT.datetime.now()
+    telegram_id = message.chat.id
+    comment = message.text
+    with conn:
+        client_id = [i[0] for i in conn.execute(f"SELECT * FROM Clients WHERE telegram_id = {message.chat.id}")][0]
+        dish_ids = ''
+        list_orders_dish = [i[0] for i in conn.execute(
+            f'SELECT ShoppingCart.dish_id FROM ShoppingCart WHERE ShoppingCart.client_id = {message.chat.id}')]
+        # print(list_orders_dish)
+        j = 0
+        for i in list_orders_dish:
+            print(i)
+            count_orders = [i[0] for i in conn.execute(
+                f"SELECT ShoppingCart.count FROM ShoppingCart WHERE {int(i)} = ShoppingCart.dish_id")][0]
+            dish_ids += str(i) + ':' + str(count_orders) + ', '
+            j += 1
+        conn.execute(orders_table, [client_id, dish_ids, current_datetime, telegram_id, comment])
+    conn.commit()
+    bot.send_message(message.chat.id, 'Спасибо за комментарий! Постараемся учесть Ваши пожелания.\n'
+                                      'Ваша заявка оформлена! Ожидайте Ваш заказ :) ', reply_markup=Main_inline_keyb)
+
 
 
 
