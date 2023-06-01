@@ -6,6 +6,7 @@ import sqlite3
 import os
 import array, gspread, requests, subprocess, datetime, uuid
 import datetime as DT
+import time
 
 
 # logfile = str(datetime.date.today()) + '.log' # формируем имя лог-файла
@@ -69,6 +70,7 @@ with conn:
     dish_all_dict = dict(zip(dish_names, [[i[1],i[2], i[3], i[4],i[5], i[6], i[7], i[9], i[0]] for i in conn.execute(f"SELECT * FROM Dish")]))
 
 
+
 # print(dish_names)
 # print(dish_dict)
 
@@ -124,7 +126,7 @@ profile_edit_data = {"Изменить имя": "edit:name",
                      "Изменить телефон": "edit:phone_number",
                      "Изменить адрес": "edit:delivery_adress",
                      "Вернуться в меню": "menu:b1"}
-def create_edit_button(dct):  # функция для создания кнопок для изменения полей профиля пользователя
+def create_edit_button(dct):  # функция для создания кнопок для изменения полей профиля пользователя, принимает словарь
     edit_button = telebot.types.InlineKeyboardMarkup()
     for key, value in dct.items():
         edit_button.add(telebot.types.InlineKeyboardButton(key, callback_data=value))
@@ -297,8 +299,7 @@ def query_handler(call):
             bot.send_message(call.message.chat.id, "Чтобы пользоваться чат-ботом, нужно пройти регистрацию.",
                              reply_markup=Reg_inline_keyb)
         else:  # если есть, то показываем пользователю его корзину+клавиатуру
-            check_ids = [i[0] for i in cursor.execute(
-                f'SELECT ShoppingCart.dish_id FROM ShoppingCart WHERE ShoppingCart.client_id = {client_telegram_id}')]
+            check_ids = [i[0] for i in cursor.execute(f'SELECT ShoppingCart.dish_id FROM ShoppingCart WHERE ShoppingCart.client_id = {client_telegram_id}')]
             info = []
             for i in check_ids:
                 dish_name_cart = cursor.execute(f'SELECT * FROM Dish WHERE Dish.id = {i}')
@@ -321,6 +322,40 @@ def query_handler(call):
                 bot.send_message(call.message.chat.id, "Ваша корзина ещё пуста. Добавьте блюда в корзину.", reply_markup=order_after_cart_markup)
             else:
                 bot.send_message(call.message.chat.id, f'{result}\nОбщая стоимость: {total_price} р.\u2705', reply_markup=order_after_cart_markup)
+    """START Removing items from the cart START"""
+    if call.data.split(':')[1] == 'clear_basket':
+        dish_id_list = [i[0] for i in cursor.execute(f'SELECT dish_id FROM ShoppingCart WHERE client_id = {client_telegram_id}')]
+        count_list = [i[0] for i in cursor.execute(f'SELECT count FROM ShoppingCart WHERE client_id = {client_telegram_id}')]
+        lst_dict = dict(zip(dish_id_list, count_list))
+        print(dish_id_list)  # все айди блюд конкретного юзера в корзине + их количество
+        print(count_list)
+        print(lst_dict)
+        dish_name_list = [[i[0] for i in conn.execute(f'SELECT name FROM Dish WHERE id = {i}')][0] for i in dish_id_list]
+        print(dish_name_list)
+        lst2_dict = dict(zip(dish_name_list, lst_dict.items()))
+        print(lst2_dict)
+
+        Clear_basket_keyb = InlineKeyboardMarkup(row_width=3)
+        for key, value in lst2_dict.items():
+            Clear_basket_keyb.add(telebot.types.InlineKeyboardButton(f"{key}: {value[1]} шт.", callback_data=f"{value[0]}:{value[1]}"))
+            Clear_basket_keyb.add(InlineKeyboardButton("-", callback_data="user_basket:clear_dish"))
+            Clear_basket_keyb.add(InlineKeyboardButton("Удалить", callback_data="user_basket:clear_dish"))
+        Clear_basket_keyb.add(InlineKeyboardButton("Удалить всё", callback_data="user_basket:clear_basket_all"))
+        bot.send_message(call.message.chat.id, "Выберите товар для удаления из корзины:", reply_markup=Clear_basket_keyb)
+    if call.data.split(':')[1] == "clear_basket_all":  # удаление из корзины всех данных выбранного пользователя
+        with conn:
+            conn.execute(f'DELETE FROM ShoppingCart WHERE client_id = {call.message.chat.id}')
+            # conn.execute(f'DELETE FROM Clients WHERE telegram_id = {message.chat.id}')
+        conn.commit()
+        msg = bot.send_message(call.message.chat.id, 'Корзина успешно очищена!')
+        time.sleep(1)
+        bot.delete_message(call.message.chat.id, msg.message_id)
+    if call.data.split(':')[1] in dish_names:
+        print(call.data.split(":")[0])
+        conn.execute(f'DELETE FROM ShoppingCart WHERE ShoppingCart.dish_id = {call.data.split(":")[0]}')
+    """END Removing items from the cart END"""
+
+
 
     if call.data.split(':')[1] == 'Оформить заказ':
         Comment_keyb = InlineKeyboardMarkup()
