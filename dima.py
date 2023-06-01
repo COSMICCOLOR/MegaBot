@@ -133,6 +133,7 @@ def create_edit_button(dct):  # функция для создания кноп�
     return edit_button
 """***END Функция для создания клавиатуры для изменения профиля пользователя END***"""
 
+
 global field, field_dict
 field_dict = {"name": "Имя", "phone_number": "Телефон", "delivery_adress": "Адрес"}
 field = 'name'
@@ -149,6 +150,19 @@ def create_registration_keyb():  # функция для создания кно
                           InlineKeyboardButton("Сохранить\u2705", callback_data="accept:save_all"),
                           InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
     return registration_keyb
+
+
+def create_edit_cart_keyb(dct):  # функция для создания клавиатуры для редактирования корзины, принимает словарь
+    Clear_basket_keyb = InlineKeyboardMarkup()
+    for key, value in dct.items():
+        Clear_basket_keyb.add(InlineKeyboardButton(f"{key}: {value[1]} шт.", callback_data=f"{key}:{value[0]}:{value[1]}"))
+        Clear_basket_keyb.add(InlineKeyboardButton("-", callback_data=f"user_basket:minus_dish_{value[0]}"),
+                              InlineKeyboardButton("+", callback_data=f"user_basket:plus_dish_{value[0]}"),
+                              InlineKeyboardButton("Удалить", callback_data="user_basket:clear_one_dish"))
+    Clear_basket_keyb.add(InlineKeyboardButton("Удалить всё из корзины", callback_data="user_basket:clear_basket_all"))
+    Clear_basket_keyb.add(InlineKeyboardButton("Показать корзину", callback_data="menu:txt3"))
+    Clear_basket_keyb.add(InlineKeyboardButton("Меню", callback_data="menu:b1"))
+    return Clear_basket_keyb
 
 
 @bot.message_handler(commands=['start'])
@@ -251,6 +265,7 @@ def query_handler(call):
         with open("photo/" + dish_all_dict[call.data.split(':')[0]][2], "rb") as img:  # calldata - id блюда и название соотв-й картинки этого блюда
             bot.send_photo(call.message.chat.id, photo=img)
         bot.send_message(call.message.chat.id, f"{result_dish}", reply_markup=create_keyboard())
+
     """***START Обработки колбэка от клавиатуры с обновляемой кнопкой количества заказываемого блюда START***"""
     global count  # используем глобальную переменную для количества добавляемого в корзину блюда
     bot.answer_callback_query(call.id)  # подтверждаем нажатие
@@ -264,6 +279,7 @@ def query_handler(call):
         bot.edit_message_text(f"{result_dish}", call.message.chat.id, call.message.message_id,
                               reply_markup=create_keyboard())  # обновляем сообщение с клавиатурой
     """***END Обработки колбэка от клавиатуры с обновляемой кнопкой количества заказываемого блюда END***"""
+
     global dict_info_dish_id
     client_telegram_id = int(call.message.chat.id)
     if call.data.split(':')[1] in ['basket', 'basket2', "txt3"]:
@@ -271,12 +287,31 @@ def query_handler(call):
             """Сначала запишем в Корзину БД данные по id telegram независимо от регистрации пользователя в БД в таблице Clients"""
             dict_info_dish_id = int(dish_ids[0])
             price_dish = [i[0] for i in conn.execute(f"SELECT price FROM Dish WHERE id ={dict_info_dish_id}")][0]
-            cart = "INSERT OR IGNORE INTO ShoppingCart (client_id, dish_id, total_price, count) values(?, ?, ?, ?)"
-            total_price_dish = float(count * price_dish)
-            with conn:
-                conn.execute(cart, [client_telegram_id, dict_info_dish_id, total_price_dish, count])
-            conn.commit()
-            count = 1  # сброс количества заказанного блюда в тексте центральной кнопки карточки
+            """Необходимо проверить, добавлял ли уже юзер в корзину данное блюдо"""
+            cursor.execute(f"SELECT * FROM ShoppingCart WHERE dish_id ={dict_info_dish_id} AND client_id ={client_telegram_id}")
+            check_dish_in_cart = cursor.fetchone()
+            print("проверка КОРЗИНЫ добавлял ли уже юзер в корзину данное блюдо", check_dish_in_cart)
+            if check_dish_in_cart is None:
+                print("ОТ НАНА привет")
+                cart = "INSERT OR IGNORE INTO ShoppingCart (client_id, dish_id, total_price, count) values(?, ?, ?, ?)"
+                total_price_dish = float(count * price_dish)
+                with conn:
+                    conn.execute(cart, [client_telegram_id, dict_info_dish_id, total_price_dish, count])
+                conn.commit()
+                count = 1  # сброс количества заказанного блюда в тексте центральной кнопки карточки
+            else:
+                print("ОТ ЭЛСА привет")
+                count_from_cart = count + [i[4] for i in conn.execute(f"SELECT * FROM ShoppingCart WHERE dish_id ={dict_info_dish_id} AND client_id = {client_telegram_id}")][0]
+                print("ОТ count_from_cart привет", count_from_cart)
+                total_price_dish2 = float((count_from_cart + count) * price_dish)
+                print("ОТ total_price_dish2 привет", total_price_dish2)
+                with conn:
+                    conn.execute(f"UPDATE ShoppingCart SET total_price = ? WHERE dish_id =? AND client_id = ?",
+                                 (total_price_dish2, dict_info_dish_id, client_telegram_id))
+                    conn.execute(f"UPDATE ShoppingCart SET count = ? WHERE dish_id =? AND client_id = ?",
+                                 (count_from_cart, dict_info_dish_id, client_telegram_id))
+                conn.commit()
+                count = 1  # сброс количества заказанного блюда в тексте центральной кнопки карточки
         else:  #если basket2, то добавлять нет необх-ти, так как уже до этого добавили, и просто выводим далее корзину
             pass
         """Создаем клавиатуру для корзины после добавления в нее первого блюда"""
@@ -284,9 +319,8 @@ def query_handler(call):
         order_after_cart_markup.add(InlineKeyboardButton("Добавить блюда в корзину", callback_data="menu:b2"))
         order_after_cart_markup.add(InlineKeyboardButton("Изменить данные профиля \U0001F464", callback_data="edit2:to_profile"))
         order_after_cart_markup.add(InlineKeyboardButton('Оформить заказ \u2705', callback_data='user_basket:Оформить заказ'))
-        order_after_cart_markup.add(InlineKeyboardButton('Очистить корзину \u274C', callback_data='user_basket:clear_basket'))
-        order_after_cart_markup.add(InlineKeyboardButton("В предыдущее меню", callback_data="menu:b3"))
-        order_after_cart_markup.add(InlineKeyboardButton("Главное меню", callback_data="menu:b1"))
+        order_after_cart_markup.add(InlineKeyboardButton('Редактировать корзину \u274C', callback_data='user_basket:clear_basket'))
+        order_after_cart_markup.add(InlineKeyboardButton("Меню", callback_data="menu:b1"))
         """Затем проверяем регистрацию пользователя"""
         bot.answer_callback_query(call.id)
         user_id = call.from_user.id  # id телеги пользователя
@@ -305,44 +339,53 @@ def query_handler(call):
                 dish_name_cart = cursor.execute(f'SELECT * FROM Dish WHERE Dish.id = {i}')
                 infos = [i for i in dish_name_cart]
                 info.append(infos)
-            print(info)
+            print("Привет от ИНФО тут надо нам цена диша", info)
             result = "Вы добавили в корзину:\n\n" \
                      "Блюдо:  (Цена за 1 шт., Количество)  \U0001F447\n"
             total_price = 0
             for i in info:
                 for j in i:
                     print(j[0])
-                    total_price += j[4]
                     with conn:
                         count_dish_cart = [i for i in conn.execute(f'SELECT count FROM ShoppingCart WHERE {j[0]} = ShoppingCart.dish_id')][0][0]
                     # print(count_dish_cart)
+                    total_price += float(j[4] * count_dish_cart)
                     result += f'{j[1]}:  {j[4]} р.,  {count_dish_cart} шт.\n'
             # если корзина пуста, то выводим соотв-е сообщение, если не пуста, то карточку корзины
             if len(check_ids) == 0:
                 bot.send_message(call.message.chat.id, "Ваша корзина ещё пуста. Добавьте блюда в корзину.", reply_markup=order_after_cart_markup)
             else:
                 bot.send_message(call.message.chat.id, f'{result}\nОбщая стоимость: {total_price} р.\u2705', reply_markup=order_after_cart_markup)
+
     """START Removing items from the cart START"""
     if call.data.split(':')[1] == 'clear_basket':
+        # все айди блюд конкретного юзера в корзине + их количество
         dish_id_list = [i[0] for i in cursor.execute(f'SELECT dish_id FROM ShoppingCart WHERE client_id = {client_telegram_id}')]
+        # кол-во штук для каждого блюда конкретного юзера в корзине
         count_list = [i[0] for i in cursor.execute(f'SELECT count FROM ShoppingCart WHERE client_id = {client_telegram_id}')]
-        lst_dict = dict(zip(dish_id_list, count_list))
-        print(dish_id_list)  # все айди блюд конкретного юзера в корзине + их количество
-        print(count_list)
-        print(lst_dict)
+        dish_id_count = dict(zip(dish_id_list, count_list))
         dish_name_list = [[i[0] for i in conn.execute(f'SELECT name FROM Dish WHERE id = {i}')][0] for i in dish_id_list]
-        print(dish_name_list)
-        lst2_dict = dict(zip(dish_name_list, lst_dict.items()))
-        print(lst2_dict)
+        global dish_name_id_count_dict
+        # словарь {название блюда: (айди блюда конкретного юзера в корзине + количествов корзине)}
+        # {'Флорида маки': (12, 1), 'Вино "PROSEKKO"': (33, 3), 'Тирамису': (25, 2), 'Пиво "Крыніца"': (14, 1)}
+        dish_name_id_count_dict = dict(zip(dish_name_list, dish_id_count.items()))
+        print(dish_id_list, count_list, dish_id_count, dish_name_list, dish_name_id_count_dict, sep='\n')
+        #отправляем пользователю созданную в функции create_edit_cart_keyb(dish_name_id_count_dict) клавиатуру
+        bot.send_message(call.message.chat.id, "Здесь Вы можете редактировать количество добавленных в корзину блюд"
+                                               " с помощью кнопок + - удалить", reply_markup=create_edit_cart_keyb(dish_name_id_count_dict))
 
-        Clear_basket_keyb = InlineKeyboardMarkup(row_width=3)
-        for key, value in lst2_dict.items():
-            Clear_basket_keyb.add(telebot.types.InlineKeyboardButton(f"{key}: {value[1]} шт.", callback_data=f"{value[0]}:{value[1]}"))
-            Clear_basket_keyb.add(InlineKeyboardButton("-", callback_data="user_basket:clear_dish"))
-            Clear_basket_keyb.add(InlineKeyboardButton("Удалить", callback_data="user_basket:clear_dish"))
-        Clear_basket_keyb.add(InlineKeyboardButton("Удалить всё", callback_data="user_basket:clear_basket_all"))
-        bot.send_message(call.message.chat.id, "Выберите товар для удаления из корзины:", reply_markup=Clear_basket_keyb)
-    if call.data.split(':')[1] == "clear_basket_all":  # удаление из корзины всех данных выбранного пользователя
+    # global count  # используем глобальную переменную для количества добавляемого в корзину блюда
+    bot.answer_callback_query(call.id)  # подтверждаем нажатие
+    # if call.data.split(':')[1] == "minus":  # если нажата кнопка "-"
+    #     if count > 1:  # если количество больше одного
+    #         count -= 1  # уменьшаем количество на один
+    #         bot.edit_message_text(f"{result_dish}", call.message.chat.id, call.message.message_id,
+    #                               reply_markup=create_keyboard())  # обновляем сообщение с клавиатурой
+
+
+
+
+    if call.data.split(':')[1] == "clear_basket_all":  # удаление из корзины всех данных пользователя по id telegram
         with conn:
             conn.execute(f'DELETE FROM ShoppingCart WHERE client_id = {call.message.chat.id}')
             # conn.execute(f'DELETE FROM Clients WHERE telegram_id = {message.chat.id}')
@@ -361,7 +404,8 @@ def query_handler(call):
         Comment_keyb = InlineKeyboardMarkup()
         Comment_keyb.add(InlineKeyboardButton("Да", callback_data="user_basket:doit"))
         Comment_keyb.add(InlineKeyboardButton("Нет", callback_data="user_basket:refuse"))
-        bot.send_message(call.message.chat.id, "Хотите добавить комментарий к заказу?", reply_markup=Comment_keyb)
+        bot.send_message(call.message.chat.id, "Хотите указать адрес для текущего заказа, контактный телефон либо "
+                                               "добавить комментарий к заказу?", reply_markup=Comment_keyb)
     if call.data.split(':')[1] == "doit":
         bot.answer_callback_query(call.id)  # подтверждаем нажатие
         bot.send_message(call.message.chat.id, "Укажите дополнительную информацию к своему заказу.",
