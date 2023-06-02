@@ -413,7 +413,7 @@ def query_handler(call):
                                                " с помощью кнопок +, -, удалить", call.message.chat.id, call.message.message_id,
                                    reply_markup=create_edit_cart_keyb(dish_name_id_count_dict))  # обновляем сообщение с клавиатурой
         msg = bot.send_message(call.message.chat.id, f"Количество блюда {call.data.split(':')[2]} в корзине увеличено")
-        time.sleep(2)
+        time.sleep(3)
         bot.delete_message(call.message.chat.id, msg.message_id)
     if call.data.split(':')[1] == "clear_one_dish":  # если нажата кнопка "удалить" ['dish_minus', 'удалить', 'Нигири Сяке', '14', '1']
         with conn:
@@ -424,18 +424,22 @@ def query_handler(call):
                                                " с помощью кнопок +, -, удалить", call.message.chat.id, call.message.message_id,
                               reply_markup=create_edit_cart_keyb(dish_name_id_count_dict))  # обновляем сообщение с клавиатурой
         msg = bot.send_message(call.message.chat.id, "Блюдо удалено из корзины")
-        time.sleep(1)
+        time.sleep(3)
         bot.delete_message(call.message.chat.id, msg.message_id)
 
     if call.data.split(':')[1] == "clear_basket_all":  # удаление из корзины всех данных пользователя по id telegram
+        After_clear_basket_keyb = InlineKeyboardMarkup(row_width=2)
+        After_clear_basket_keyb.add(InlineKeyboardButton("Показать корзину", callback_data="menu:txt3"),
+                                    InlineKeyboardButton("Меню", callback_data="menu:b1"))
         with conn:
             conn.execute(f'DELETE FROM ShoppingCart WHERE client_id = {call.message.chat.id}')
             # conn.execute(f'DELETE FROM Clients WHERE telegram_id = {message.chat.id}')
         conn.commit()
-
+        bot.send_message(call.message.chat.id, "Корзина успешно очищена!", reply_markup=After_clear_basket_keyb)
         msg = bot.send_message(call.message.chat.id, 'Корзина успешно очищена!')
-        time.sleep(1)
+        time.sleep(3)
         bot.delete_message(call.message.chat.id, msg.message_id)
+        """!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"""
     if call.data.split(':')[1] in dish_names:
         print(call.data.split(":")[0])
         conn.execute(f'DELETE FROM ShoppingCart WHERE ShoppingCart.dish_id = {call.data.split(":")[0]}')
@@ -447,7 +451,6 @@ def query_handler(call):
         Comment_keyb.add(InlineKeyboardButton("Нет", callback_data="user_basket:refuse"))
         bot.send_message(call.message.chat.id, "Хотите указать адрес для текущего заказа, контактный телефон либо "
                                                "добавить комментарий к заказу?", reply_markup=Comment_keyb)
-
 
     if call.data.split(':')[1] == "doit":
         bot.answer_callback_query(call.id)  # подтверждаем нажатие
@@ -477,6 +480,9 @@ def query_handler(call):
                 dish_ids += str(i) + ':' + str(count_orders) + ', '
                 j += 1
             conn.execute(orders_table, [client_id, dish_ids, current_datetime, telegram_id, comment])
+        conn.commit()
+        with conn:
+            conn.execute(f'DELETE FROM ShoppingCart WHERE client_id = {call.message.chat.id}')
         conn.commit()
 # END code serezha + Dima_______________________________________________________________________________________________
 
@@ -692,6 +698,9 @@ def handle_order_answer(message):
             dish_ids += str(i) + ':' + str(count_orders) + ', '
             j += 1
         conn.execute(orders_table, [client_id, dish_ids, current_datetime, telegram_id, comment])
+    conn.commit()
+    with conn:
+        conn.execute(f'DELETE FROM ShoppingCart WHERE client_id = {message.chat.id}')
     conn.commit()
     bot.send_message(message.chat.id, 'Спасибо за комментарий! Постараемся учесть Ваши пожелания.\n'
                                       'Ваша заявка оформлена! Ожидайте Ваш заказ :) ', reply_markup=Main_inline_keyb)
