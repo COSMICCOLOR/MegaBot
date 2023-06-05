@@ -19,94 +19,107 @@ markdown = """
     [text](URL)
     """
 
-with conn:
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM CategoryDish")
-    data = cursor.fetchall()  # fetchone
-    column_names = [i[1] for i in conn.execute(f"SELECT * FROM CategoryDish")]
-    column_ids = [i[0] for i in conn.execute(f"SELECT * FROM CategoryDish")]
-    column_dict = dict(zip(column_names, column_ids))
-# print(column_names)
-# print(column_ids)
-# print(column_dict)
+global dish_dict
 
+try:
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT * FROM CategoryDish")
+        data = cursor.fetchall()  # fetchone
+        column_names = [i[1] for i in conn.execute(f"SELECT * FROM CategoryDish")]
+        column_ids = [i[0] for i in conn.execute(f"SELECT * FROM CategoryDish")]
+        column_dict = dict(zip(column_names, column_ids))
+    # print(column_names)
+    # print(column_ids)
+    # print(column_dict)
+except Exception as e:
+    print(e)
 
-with conn:
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM SubCategory")
-    data = cursor.fetchall()  # fetchone
-    subcat_names = [i[1] for i in conn.execute(f"SELECT * FROM SubCategory")]
-    cat_ids = [str(i[4]) for i in conn.execute(f"SELECT * FROM SubCategory")]
-    subcat_id = [str(i[0]) for i in conn.execute(f"SELECT * FROM SubCategory")]
-    subcat_dict = dict(zip(subcat_names, cat_ids))  # словарь {название субкатегории: id CategoryDish}
-    subcat_dict2 = dict(zip(subcat_names, subcat_id))  # словарь {название субкатегории: id SubCategory}
-    subcat_dict3 = {k: ''.join([d[k] for d in (subcat_dict, subcat_dict2)]) for k in subcat_dict.keys()}  # словарь {название субкатегории: 'id CategoryDish+id SubCategory'} значение из двух айдишек будем потом разбивать в колбэк дате
-# print(subcat_names)
-# print(cat_ids)
-# print(subcat_dict)
-# print(subcat_dict3)
+try:
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT * FROM SubCategory")
+        data = cursor.fetchall()  # fetchone
+        subcat_names = [i[1] for i in conn.execute(f"SELECT * FROM SubCategory")]
+        cat_ids = [str(i[4]) for i in conn.execute(f"SELECT * FROM SubCategory")]
+        subcat_id = [str(i[0]) for i in conn.execute(f"SELECT * FROM SubCategory")]
+        subcat_dict = dict(zip(subcat_names, cat_ids))  # словарь {название субкатегории: id CategoryDish}
+        subcat_dict2 = dict(zip(subcat_names, subcat_id))  # словарь {название субкатегории: id SubCategory}
+        subcat_dict3 = {k: ''.join([d[k] for d in (subcat_dict, subcat_dict2)]) for k in subcat_dict.keys()}  # словарь {название субкатегории: 'id CategoryDish+id SubCategory'} значение из двух айдишек будем потом разбивать в колбэк дате
+except Exception as e:
+    print(e)
+try:
+    with conn:
+        global client_id
+        clients_telegram_id = [i[4] for i in conn.execute(f"SELECT * FROM Clients")]
+        print("айди телеги юзеров", clients_telegram_id)
+except Exception as e:
+    print(e)
 
-with conn:
-    global client_id
-    clients_telegram_id = [i[4] for i in conn.execute(f"SELECT * FROM Clients")]
-    print("айди телеги юзеров", clients_telegram_id)
+try:
+    with conn:
+        orders_telegram_id = [i[5] for i in conn.execute(f"SELECT * FROM Orders")]  # telegram id юзеров, сделавших заказ
+        orders_datetime = [i[4] for i in conn.execute(f"SELECT * FROM Orders")]
+        print(type(orders_telegram_id[0]), orders_telegram_id)
+except Exception as e:
+    print(e)
+try:
+    with conn:
+        data = conn.execute("SELECT * FROM Dish")
+        print(data.fetchall())
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT * FROM Dish")
+        data2 = cursor.fetchall()  # fetchone
+        dish_names = [i[1] for i in conn.execute(f"SELECT * FROM Dish")]
+        dish_cat_ids = [str(i[11]) for i in conn.execute(f"SELECT * FROM Dish")]
+        dish_ids = [str(i[0]) for i in conn.execute(f"SELECT * FROM Dish")]
+        dish_dict2 = dict(zip(dish_names, dish_ids))
+        dish_dict = dict(zip(dish_names, dish_cat_ids))
+        dish_all_dict = dict(zip(dish_names, [[i[1], i[2], i[3], i[4], i[5], i[6], i[7], i[9], i[0]] for i in conn.execute(f"SELECT * FROM Dish")]))
+except Exception as e:
+    print(e)
 
-with conn:
-    orders_telegram_id = [i[5] for i in conn.execute(f"SELECT * FROM Orders")]  # telegram id юзеров, сделавших заказ
-    orders_datetime = [i[4] for i in conn.execute(f"SELECT * FROM Orders")]
-    print(type(orders_telegram_id[0]), orders_telegram_id)
-
-with conn:
-    data = conn.execute("SELECT * FROM Dish")
-    print(data.fetchall())
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM Dish")
-    data2 = cursor.fetchall()  # fetchone
-    dish_names = [i[1] for i in conn.execute(f"SELECT * FROM Dish")]
-    dish_cat_ids = [str(i[11]) for i in conn.execute(f"SELECT * FROM Dish")]
-    dish_ids = [str(i[0]) for i in conn.execute(f"SELECT * FROM Dish")]
-    dish_dict2 = dict(zip(dish_names, dish_ids))
-    dish_dict = dict(zip(dish_names, dish_cat_ids))
-    dish_all_dict = dict(zip(dish_names, [[i[1], i[2], i[3], i[4], i[5], i[6], i[7], i[9], i[0]] for i in conn.execute(f"SELECT * FROM Dish")]))
-
-
-
-# print(dish_names)
-# print(dish_dict)
-
-with conn:
-    data = conn.execute("SELECT * FROM Reviews")
-    print(data.fetchall())
-    review_order = [i[1] for i in conn.execute(f"SELECT * FROM Reviews")]
-    review_dish = [i[2] for i in conn.execute(f"SELECT * FROM Reviews")]
-    client_id = [i[3] for i in conn.execute(f"SELECT * FROM Reviews")]
-    orders_id = [i[4] for i in conn.execute(f"SELECT * FROM Reviews")]
-    print("qqqqqqqqq", review_order, client_id)
-    dish_id = [str(i[5]) for i in conn.execute(f"SELECT * FROM Reviews")]
-    review_order_dict = dict(zip(review_order[-3:], client_id[-3:]))  # можно корректировать индексами количество выводимых отзывов
-    print(review_order_dict)
-    review_dish_dict = dict(zip(dish_id, review_dish))
-    print(review_dish_dict)
-    client_name = [i[1] for i in conn.execute(f"SELECT * FROM Clients")]
-    client_id2 = [i[0] for i in conn.execute(f"SELECT * FROM Clients")]
-    client_dict = dict(zip(client_id2, client_name))
-    print(client_dict)
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM Reviews")
-    data_feedback = cursor.fetchall()  # fetchone
-    feedback = [i[1] for i in conn.execute(f"SELECT * FROM Reviews")]
-    cursor.execute("SELECT * FROM Clients WHERE id = 4")
-    gg = cursor.fetchall()
-    print(gg)
+try:
+    with conn:
+        data = conn.execute("SELECT * FROM Reviews")
+        print(data.fetchall())
+        review_order = [i[1] for i in conn.execute(f"SELECT * FROM Reviews WHERE accept = 'True'")]
+        review_dish = [i[2] for i in conn.execute(f"SELECT * FROM Reviews")]
+        client_id = [i[3] for i in conn.execute(f"SELECT * FROM Reviews WHERE accept = 'True'")]
+        orders_id = [i[4] for i in conn.execute(f"SELECT * FROM Reviews")]
+        print("qqqqqqqqq", review_order, client_id)
+        dish_id = [str(i[5]) for i in conn.execute(f"SELECT * FROM Reviews")]
+        review_order_dict = dict(zip(review_order, client_id))  # можно корректировать индексами количество выводимых отзывов
+        print(review_order_dict)
+        review_dish_dict = dict(zip(dish_id, review_dish))
+        print(review_dish_dict)
+        client_name = [i[1] for i in conn.execute(f"SELECT * FROM Clients")]
+        client_id2 = [i[0] for i in conn.execute(f"SELECT * FROM Clients")]
+        client_dict = dict(zip(client_id2, client_name))
+        print(client_dict)
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT * FROM Reviews")
+        data_feedback = cursor.fetchall()  # fetchone
+        feedback = [i[1] for i in conn.execute(f"SELECT * FROM Reviews")]
+        cursor.execute("SELECT * FROM Clients WHERE id = 4")
+        gg = cursor.fetchall()
+        print(gg)
+except Exception as e:
+    print(e)
 
 # Создаем клавиатуру и кнопки для главного меню USER-панели
 Main_inline_keyb = InlineKeyboardMarkup()
 Main_inline_keyb.add(InlineKeyboardButton("Меню ресторана", callback_data="menu:txt1"))
 Main_inline_keyb.add(InlineKeyboardButton("Моя корзина", callback_data="menu:txt3"))
-Main_inline_keyb.add(InlineKeyboardButton("Мои заказы", callback_data="menu:txt4"))
+Main_inline_keyb.add(InlineKeyboardButton("История заказов", callback_data="menu:txt4"))
 Main_inline_keyb.add(InlineKeyboardButton("О нас", callback_data="menu:txt2"))
 Main_inline_keyb.add(InlineKeyboardButton("Профиль пользователя", callback_data="menu:profile"))
 
+# Создаем клавиатуру и кнопки для главного меню ADMIN-панели
+Admin_keyb = InlineKeyboardMarkup()
+Admin_keyb.add(InlineKeyboardButton("Добавить администратора➕", callback_data="admin:addadmin"))
+Admin_keyb.add(InlineKeyboardButton("Удалить администратора➖", callback_data="admin:deladmin"))
+Admin_keyb.add(InlineKeyboardButton("Редактировать профиль администратора🛠️", callback_data="admin:redadmin"))
 
 """***START Функция для создания клавиатуры с обновляемой кнопкой количества заказываемого блюда START***"""
 count = 1  # переменная для хранения количества добавляемого в корзину блюда
@@ -173,6 +186,18 @@ def start(message):
     global user_telegram_id
     user_telegram_id = message.from_user.id
     # print(type(user_telegram_id), message.from_user.id)
+
+@bot.message_handler(commands=['addadmin'])
+def add_admin(message):
+    user_id = message.from_user.id  # id телеги пользователя
+    with conn:
+        row = [i[1] for i in conn.execute("SELECT * FROM BotAdmins WHERE position = 'main admin'")]
+    if user_id not in row:  # проверяем id на пригодность
+        bot.send_message(message.chat.id, "Вы не являетесь администратором.\nВыберите лучше покушать\U0001F609 ",
+                         reply_markup=Main_inline_keyb)
+    else:  # если есть, то показываем админу клаву для управления админкой
+        bot.send_message(message.chat.id,
+                         "Админ-панель 1 уровня.\nФункционал: добавление, изменение и удаление админов 2 уровня.", reply_markup=Admin_keyb)
 
 
 @bot.callback_query_handler(func=lambda call: call.data.split(":"))
@@ -327,11 +352,12 @@ def query_handler(call):
         global dish_id_from_card
         dish_id_from_card = call.data.split(':')[2]
         DishReview_inline_keyb = InlineKeyboardMarkup()
-        DishReview_inline_keyb.add(InlineKeyboardButton("Оставить отзыв", callback_data=f"dish_card:dish_feedback2:{call.data.split(':')[2]}"))
+        DishReview_inline_keyb.add(InlineKeyboardButton("Оставить отзыв", callback_data=f"dish_card:dish_feedback2:{dish_id_from_card}"))
         DishReview_inline_keyb.add(InlineKeyboardButton("Меню", callback_data="menu:b1"))
+        print("АЙДИ ТЕКУЩЕГО БЛЮДА", dish_id_from_card)
         with conn:
-            dish_feedback = [i[1] for i in conn.execute(f"SELECT * FROM ReviewDish WHERE dish_id = {call.data.split(':')[2]}")]
-            cl_id_feedback = [i[2] for i in conn.execute(f"SELECT * FROM ReviewDish WHERE dish_id = {call.data.split(':')[2]}")]
+            dish_feedback = [i[1] for i in conn.execute(f"SELECT * FROM ReviewDish WHERE dish_id = {call.data.split(':')[2]} AND accept = 'True'")]
+            cl_id_feedback = [i[2] for i in conn.execute(f"SELECT * FROM ReviewDish WHERE dish_id = {call.data.split(':')[2]} AND accept = 'True'")]
             # review_order_dict = dict(zip(review_order[-3:], client_id[-3:]))  # можно корректировать индексами количество выводимых отзывов
             feedback_dish_dict = dict(zip(dish_feedback, cl_id_feedback))
             cl_name = [i[1] for i in conn.execute(f"SELECT * FROM Clients")]
@@ -340,13 +366,18 @@ def query_handler(call):
         result_feedback_card = ""
         for key, value in feedback_dish_dict.items():
             result_feedback_card += f"\U0001F5E8{cl_dict[value]}: '{key}'\n\n"
-        bot.send_message(call.message.chat.id, f"{result_feedback_card}", reply_markup=DishReview_inline_keyb)
+        print("СЛОВАРЬ С ОТЗЫВАМИ", result_feedback_card)
+        if len(result_feedback_card) != 0:
+            bot.send_message(call.message.chat.id, f"{result_feedback_card}", reply_markup=DishReview_inline_keyb)
+        else:
+            bot.send_message(call.message.chat.id, f"Отзывов еще нет. Вы можете оставить свой, если заказывали такое блюдо.", reply_markup=DishReview_inline_keyb)
     if call.data.split(':')[1] == "dish_feedback2":
         DishReviewError_inline_keyb = InlineKeyboardMarkup()
         DishReviewError_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
         DishReviewError_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:b3"))
         # колонка dish_ids - колонка в Orders - строка из корзины с id заказанных блюд + количество шт.
-        ids_string = list(filter(lambda x: call.data.split(':')[2] in x, [list(map(lambda x: x.replace(" ", "").split(":")[0], i[0].split(","))) for i in conn.execute(f"SELECT dish_ids FROM Orders WHERE telegram_id = {call.message.chat.id}")]))
+        ids_string = list(filter(lambda x: dish_id_from_card in x, [list(map(lambda x: x.replace(" ", "").split(":")[0], i[0].split(","))) for i in conn.execute(f"SELECT dish_ids FROM Orders WHERE telegram_id = {call.message.chat.id}")]))
+
         print("JSONSSSSS ids dishes", ids_string)
         if call.message.chat.id in orders_telegram_id and len(ids_string) != 0:
             print("clients id telegram", call.message.chat.id)
@@ -462,20 +493,21 @@ def query_handler(call):
     if call.data.split(':')[1] == "doit":
         bot.answer_callback_query(call.id)  # подтверждаем нажатие
         bot.send_message(call.message.chat.id, "Укажите дополнительную информацию к своему заказу.",
-                         reply_markup=telebot.types.ForceReply())  # просим пользователя оставить коммент
+                         reply_markup=telebot.types.ForceReply())  # просим пользователя оставить коммент и форсим в хендлер
     if call.data.split(':')[1] == "refuse":
         with conn:
             client_address = [i[3] for i in conn.execute(f"SELECT * FROM Clients WHERE telegram_id = {call.message.chat.id}")][0]
         bot.send_message(call.message.chat.id, f'Ваша заявка оформлена! Ожидайте Ваш заказ по адресу: {client_address} :)', reply_markup=Main_inline_keyb)
-        orders_table = "INSERT OR IGNORE INTO Orders (client_id, dish_ids, date, telegram_id, comment) values(?, ?, ?, ?, ?)"
+        orders_table = "INSERT OR IGNORE INTO Orders (client_id, dish_ids, total_price, date, telegram_id, comment) values(?, ?, ?, ?, ?, ?)"
         current_datetime = DT.datetime.now()
         telegram_id = call.message.chat.id
         comment = "Без комментария"
         with conn:
             client_id = [i[0] for i in conn.execute(f"SELECT * FROM Clients WHERE telegram_id = {call.message.chat.id}")][0]
+            total_price = sum([i[3] for i in conn.execute(f'SELECT * FROM ShoppingCart WHERE client_id = {call.message.chat.id} AND count > 0')])
+            print(total_price)
             dish_ids = ''
-            list_orders_dish = [i[0] for i in conn.execute(
-                f'SELECT ShoppingCart.dish_id FROM ShoppingCart WHERE ShoppingCart.client_id = {call.message.chat.id} AND ShoppingCart.count > 0')]
+            list_orders_dish = [i[0] for i in conn.execute(f'SELECT dish_id FROM ShoppingCart WHERE client_id = {call.message.chat.id} AND count > 0')]
             # print(list_orders_dish)
             j = 0
             for i in list_orders_dish:
@@ -484,7 +516,7 @@ def query_handler(call):
                     f"SELECT ShoppingCart.count FROM ShoppingCart WHERE {int(i)} = ShoppingCart.dish_id AND ShoppingCart.count > 0")][0]
                 dish_ids += str(i) + ':' + str(count_orders) + ', '
                 j += 1
-            conn.execute(orders_table, [client_id, dish_ids, current_datetime, telegram_id, comment])
+            conn.execute(orders_table, [client_id, dish_ids, total_price, current_datetime, telegram_id, comment])
         conn.commit()
         with conn:
             conn.execute(f'DELETE FROM ShoppingCart WHERE client_id = {call.message.chat.id}')
@@ -529,34 +561,29 @@ def query_handler(call):
         AfterReview_inline_keyb = InlineKeyboardMarkup()
         AfterReview_inline_keyb.add(InlineKeyboardButton("Оставить отзыв", callback_data="feedback:r3"))
         AfterReview_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
+
         result_card = ""
         for key, value in review_order_dict.items():
             result_card += f"\U0001F5E8{client_dict[value]}: '{key}'\n\n"
-        bot.send_message(call.message.chat.id, f"{result_card}", reply_markup=AfterReview_inline_keyb)
+
+        print("СЛОВАРЬ С ОТЗЫВАМИ О ЗАКАЗАХ", result_card)
+        if len(result_card) != 0:
+            bot.send_message(call.message.chat.id, f"{result_card}", reply_markup=AfterReview_inline_keyb)
+        else:
+            bot.send_message(call.message.chat.id,
+                             f"Отзывов еще нет. Вы можете оставить свой, если ранее офромляли заказ.",
+                             reply_markup=Main_inline_keyb)
     if call.data.split(':')[1] == "r3":
         MakeReviewError_inline_keyb = InlineKeyboardMarkup()
         MakeReviewError_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
         MakeReviewError_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:txt2"))
-        # MakeReviewSuccess_inline_keyb = InlineKeyboardMarkup()
-        # MakeReviewSuccess_inline_keyb.add(InlineKeyboardButton("Отзыв на заказ", callback_data="feedback:r4"))
-        # MakeReviewSuccess_inline_keyb.add(InlineKeyboardButton("Отзыв на блюдо", callback_data="feedback:r5"))
-        if user_telegram_id in orders_telegram_id:
-            print("clients id telegram", user_telegram_id)
-            #кнопка оставить отзыв на заказ
-            #кнопка оставить отзыв на блюдо
-            # bot.send_message(call.message.chat.id, "Выбрать:", reply_markup=MakeReviewSuccess_inline_keyb)
+        if call.message.chat.id in orders_telegram_id:
+            print("clients id telegram", call.message.chat.id)
             bot.answer_callback_query(call.id)  # подтвердить нажатие
             bot.send_message(call.message.chat.id, "Как вы оцениваете работу ресторана?", reply_markup=telebot.types.ForceReply())  # спрашиваем пользователя о его отзыве
         else:
             bot.send_message(call.message.chat.id, "Оставить отзыв о работе ресторана Вы сможете после оформления заказа с помощью нашаего чат-бота. Спасибо!",
                              reply_markup=MakeReviewError_inline_keyb)  # выдать клаву если пользователь ранее не делал заказов
-    # if call.data.split(':')[1] == "r4":
-    #     ClientOrders_inline_keyb = InlineKeyboardMarkup()
-    #     [ClientOrders_inline_keyb.add(InlineKeyboardButton(date_info, callback_data=f"{date_info}")) for date_info in orders_datetime]
-    #     ClientOrders_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
-    #     ClientOrders_inline_keyb.add(InlineKeyboardButton("Назад", callback_data="menu:txt2"))
-    #     bot.send_message(call.message.chat.id, "Вот все Ваши заказы. Выберите тот, на который хотите оставить отзыв:", reply_markup=ClientOrders_inline_keyb)
-
     if call.data.split(':')[1] in ["profile", "to_profile"]:
         if call.data.split(':')[1] == "to_profile":
             global profile_edit_data
@@ -579,7 +606,6 @@ def query_handler(call):
             bot.send_message(call.message.chat.id,
                              f"Ваш профиль:\nИмя: {name}\nТелефон: {phone}\nАдрес: {address}\n\nВы можете изменить любое из этих полей, нажав на соответствующую кнопку.",
                              reply_markup=create_edit_button(profile_edit_data))
-
     if call.data.split(':')[1] in field_dict:
         global field
         field = call.data.split(':')[1]
@@ -618,12 +644,52 @@ def query_handler(call):
         else:
             bot.send_message(call.message.chat.id, f"Введите корректные данные для всех полей и сохраните данные.", reply_markup=create_registration_keyb())
 
+    if call.data.split(':')[1] == 'txt4':
+        user_id = call.from_user.id  # id телеги пользователя
+        cursor.execute("SELECT * FROM Clients WHERE telegram_id = ?", (user_id,))  # проверяем, есть ли запись о пользователе в БД
+        row = cursor.fetchone()
+        print(row)
+        if row is None:  # если нет, то просим пользователя ввести свои данные/зарегистрироваться
+            Reg_inline_keyb = InlineKeyboardMarkup()
+            Reg_inline_keyb.add(InlineKeyboardButton("РЕГИСТРАЦИЯ", callback_data="prereg:pushreg"))
+            Reg_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
+            bot.send_message(call.message.chat.id, "Чтобы пользоваться чат-ботом, нужно пройти регистрацию.",
+                             reply_markup=Reg_inline_keyb)
+        else:
+            with conn:
+                order_dates = [i[4] for i in cursor.execute(f"SELECT * FROM Orders WHERE telegram_id = {call.from_user.id}")]  # достаём из БД Дату и id-ки заказов
+                ordered_dishes = [i[2] for i in cursor.execute(f"SELECT * FROM Orders WHERE telegram_id = {call.from_user.id}")]  # достаём из БД Дату и id-ки заказов
+                date_dish_dict = dict(zip(order_dates, ordered_dishes))
+            # orders_client = [i for i in cursor.execute(f"SELECT date, dish_ids FROM Orders WHERE telegram_id = {call.from_user.id}")]  # достаём из БД Дату и id-ки заказов
+            print("ИСТОРИЯ ЗАКАЗОВ", date_dish_dict)
+            text_card = 'Вот все Ваши заказы:\n'
+            num = 1
+            for key, value in date_dish_dict.items():
+                order_date = key[:16]
+                text_card += f"{num}. Дата заказа: {order_date}:\n"
+                for info in value.replace(" ", "").split(',')[:-1]:
+                    print("info", info)
+                    dish_name = [i for i in cursor.execute(f"SELECT name FROM Dish WHERE id = {info.split(':')[0]}")][0]
+                    amount = info.split(':')[1]  # количество штук
+                    text_card += f'- {dish_name[0]} - {amount} шт.\n'
+                num += 1
+            bot.send_message(call.message.chat.id, f'{text_card}')
+
+    if call.data.split(':')[1] == "addadmin":
+        add_inline_keyb = InlineKeyboardMarkup()
+        add_inline_keyb.add(InlineKeyboardButton("Добавить данные о новом администраторе", callback_data="addm:adminid"))
+        add_inline_keyb.add(InlineKeyboardButton("Вернуться назад↩ ", callback_data="addm:backmenu"))
+        bot.send_message(call.message.chat.id, "Добавьте данные о новом администраторе", reply_markup=add_inline_keyb)
+    if call.data.split(':')[1] == "backmenu":
+        bot.send_message(call.message.chat.id, "Добавьте данные о новом администраторе", reply_markup=Admin_keyb)
+    if call.data.split(":")[1] == "adminid":
+        bot.send_message(call.message.chat.id, "Введите telegram id нового администратора", reply_markup=telebot.types.ForceReply())
 
 # обработка ответа пользователя на вопрос о его отзыве на работу ресторана с последующей запись в БД
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Как вы оцениваете работу ресторана?"])
 def handle_review_answer(message):
-    client_id = [i[0] for i in conn.execute(f"SELECT id FROM Clients WHERE telegram_id = {user_telegram_id}")][0]
-    orders_id = [i[0] for i in conn.execute(f"SELECT id FROM Orders WHERE telegram_id = {user_telegram_id}")][-1] # id последнего заказа из БД
+    client_id = [i[0] for i in conn.execute(f"SELECT id FROM Clients WHERE telegram_id = {message.chat.id}")][0]
+    orders_id = [i[0] for i in conn.execute(f"SELECT id FROM Orders WHERE telegram_id = {message.chat.id}")][-1] # id последнего заказа из БД
     print("айди юзера", client_id, "id последнего заказа из БД", orders_id)
     dish_id = None
     review_order = message.text  # текст отзыва пользователя
@@ -637,8 +703,8 @@ def handle_review_answer(message):
 # обработка ответа пользователя на вопрос о его отзыве на блюдо с последующей записью в БД
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Понравилось ли Вам данное блюдо?"])
 def handle_dish_review_answer(message):
-    client_id = [i[0] for i in conn.execute(f"SELECT id FROM Clients WHERE telegram_id = {user_telegram_id}")][0]
-    orders_id = [i[0] for i in conn.execute(f"SELECT id FROM Orders WHERE telegram_id = {user_telegram_id}")][-1] # id последнего заказа из БД
+    client_id = [i[0] for i in conn.execute(f"SELECT id FROM Clients WHERE telegram_id = {message.chat.id}")][0]
+    orders_id = [i[0] for i in conn.execute(f"SELECT id FROM Orders WHERE telegram_id = {message.chat.id}")][-1] # id последнего заказа из БД
     print("айди юзера", client_id, "id последнего заказа из БД", orders_id)
     dish_id = dish_id_from_card
     review_dish = message.text  # текст отзыва пользователя
@@ -676,7 +742,9 @@ def handle_reg_answer(message):
 # обработка ответа пользователя на предложение оставить коммент о текущем заказе с последующей записью в БД Orders
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Укажите дополнительную информацию к своему заказу."])
 def handle_order_answer(message):
-    orders_table = "INSERT OR IGNORE INTO Orders (client_id, dish_ids, date, telegram_id, comment) values(?, ?, ?, ?, ?)"
+    orders_table = "INSERT OR IGNORE INTO Orders (client_id, dish_ids, total_price, date, telegram_id, comment) values(?, ?, ?, ?, ?, ?)"
+    total_price = [i[0] for i in conn.execute(
+        f'SELECT total_price FROM ShoppingCart WHERE client_id = {message.chat.id} AND count > 0')]
     current_datetime = DT.datetime.now()
     telegram_id = message.chat.id
     comment = message.text
@@ -693,7 +761,7 @@ def handle_order_answer(message):
                 f"SELECT ShoppingCart.count FROM ShoppingCart WHERE {int(i)} = ShoppingCart.dish_id AND ShoppingCart.count > 0")][0]
             dish_ids += str(i) + ':' + str(count_orders) + ', '
             j += 1
-        conn.execute(orders_table, [client_id, dish_ids, current_datetime, telegram_id, comment])
+        conn.execute(orders_table, [client_id, dish_ids, total_price, current_datetime, telegram_id, comment])
     conn.commit()
     with conn:
         conn.execute(f'DELETE FROM ShoppingCart WHERE client_id = {message.chat.id}')
@@ -701,7 +769,51 @@ def handle_order_answer(message):
     bot.send_message(message.chat.id, 'Спасибо за комментарий! Постараемся учесть Ваши пожелания.\n'
                                       'Ваша заявка оформлена! Ожидайте Ваш заказ :) ', reply_markup=Main_inline_keyb)
 
+@bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Введите telegram id нового администратора"])
+def handler_admin_first_answer(message):
+    print("Шляпа1")
+    admin_table = "INSERT OR IGNORE INTO BotAdmins (telegram_id ,phone_number, position, first_name, last_name) values (?, ?, ?, ?, ?)"
+    global tg_id
+    tg_id = message.text
+    first_name, last_name, phone_number, position = '', '', '', ''
+    # add_adm = user_id
+    with conn:
+        conn.execute(admin_table, [tg_id, phone_number, position, first_name, last_name])
+    conn.commit()
+    bot.send_message(message.chat.id, "Введите имя нового администратора", reply_markup=telebot.types.ForceReply())
 
+@bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Введите имя нового администратора"])
+def handler_admin_first_answer(message):
+    print(tg_id, "Шляпа2")
+    first_name = message.text
+    with conn:
+        conn.execute(f"UPDATE BotAdmins SET first_name = ? WHERE telegram_id = ?", (first_name, tg_id))
+    conn.commit()
+    bot.send_message(message.chat.id, "Введите фамилию нового администратора", reply_markup=telebot.types.ForceReply())
+
+@bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Введите фамилию нового администратора"])
+def handler_admin_last_answer(message):
+    last_name = message.text
+    with conn:
+        conn.execute(f"UPDATE BotAdmins SET last_name = ? WHERE telegram_id = ?", (last_name, tg_id))
+    conn.commit()
+    bot.send_message(message.chat.id, "Введите номер телефона нового администратора", reply_markup=telebot.types.ForceReply())
+
+@bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Введите номер телефона нового администратора"])
+def handler_admin_last_answer(message):
+    phone = message.text
+    with conn:
+        conn.execute(f"UPDATE BotAdmins SET phone_number = ? WHERE telegram_id = ?", (phone, tg_id))
+    conn.commit()
+    bot.send_message(message.chat.id, 'Укажите должность администратора', reply_markup=telebot.types.ForceReply())
+
+@bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ['Укажите должность администратора'])
+def handler_admin_last_answer(message):
+    position = message.text
+    with conn:
+        conn.execute(f"UPDATE BotAdmins SET position = ? WHERE telegram_id = ?", (position, tg_id))
+    conn.commit()
+    bot.send_message(message.chat.id, "Админиcтратор успешно добавлен ", reply_markup=Admin_keyb)
 
 
 print("Ready")

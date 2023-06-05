@@ -52,12 +52,12 @@ with con:
             CREATE TABLE IF NOT EXISTS Orders (
                 id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                 client_id INTEGER,
-                dish_id INTEGER,
-                cart_id INTEGER,
+                dish_ids TEXT,
+                total_price FLOAT,
                 date DATETIME,
-                FOREIGN KEY (client_id) REFERENCES Clients (id),
-                FOREIGN KEY (dish_id) REFERENCES Dish (id),
-                FOREIGN KEY (cart_id) REFERENCES ShoppingCart (id)
+                telegram_id INTEGER,
+                comment TEXT,
+                FOREIGN KEY (client_id) REFERENCES Clients (id)
             );
         """)
 
@@ -100,21 +100,21 @@ with con:
         else:
             raise  # повторно выбросить исключение
 
-    try:
-        con.execute("ALTER TABLE Orders ADD COLUMN telegram_id INTEGER")
-    except sl.OperationalError as e:
-        if 'duplicate column name' in str(e):
-            pass  # игнорировать ошибку
-        else:
-            raise  # повторно выбросить исключение
-
-    try:
-        con.execute("ALTER TABLE Orders ADD COLUMN comment TEXT")
-    except sl.OperationalError as e:
-        if 'duplicate column name' in str(e):
-            pass  # игнорировать ошибку
-        else:
-            raise  # повторно выбросить исключение
+    # try:
+    #     con.execute("ALTER TABLE Orders ADD COLUMN telegram_id INTEGER")
+    # except sl.OperationalError as e:
+    #     if 'duplicate column name' in str(e):
+    #         pass  # игнорировать ошибку
+    #     else:
+    #         raise  # повторно выбросить исключение
+    #
+    # try:
+    #     con.execute("ALTER TABLE Orders ADD COLUMN comment TEXT")
+    # except sl.OperationalError as e:
+    #     if 'duplicate column name' in str(e):
+    #         pass  # игнорировать ошибку
+    #     else:
+    #         raise  # повторно выбросить исключение
 
     try:
         con.execute("ALTER TABLE ShoppingCart ADD COLUMN count INTEGER")
@@ -132,9 +132,12 @@ with con:
                     client_id INTEGER,
                     orders_id INTEGER,
                     dish_id INTEGER,
+                    accept BOOLEAN,
+                    admin_id INTEGER,
                     FOREIGN KEY (client_id) REFERENCES Clients (id),
                     FOREIGN KEY (orders_id) REFERENCES Orders (id),
-                    FOREIGN KEY (dish_id) REFERENCES Dish (id)
+                    FOREIGN KEY (dish_id) REFERENCES Dish (id),
+                    FOREIGN KEY (admin_id) REFERENCES BotAdmins (id)
                 );
             """)
 
@@ -144,8 +147,11 @@ with con:
                         review_dish TEXT,
                         client_id INTEGER,
                         dish_id INTEGER,
+                        accept BOOLEAN,
+                        admin_id INTEGER,
                         FOREIGN KEY (client_id) REFERENCES Clients (id),
-                        FOREIGN KEY (dish_id) REFERENCES Dish (id)
+                        FOREIGN KEY (dish_id) REFERENCES Dish (id),
+                        FOREIGN KEY (admin_id) REFERENCES BotAdmins (id)
                     );
                 """)
 
