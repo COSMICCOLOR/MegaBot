@@ -12,6 +12,7 @@ import time
 # logfile = str(datetime.date.today()) + '.log' # формируем имя лог-файла
 token = '6112420224:AAFd0gDtUiAC2qqWo4osq82D6qyGH07c_UY'
 bot = telebot.TeleBot(token)
+PHOTO_DIR = 'photo'
 conn = sqlite3.connect('restaurant1.db', check_same_thread=False)
 markdown = """
     *bold text*
@@ -121,10 +122,12 @@ Admin_keyb_lvl1.add(InlineKeyboardButton("Редактировать профи�
 
 # Создаем клавиатуру и кнопки для ADMIN-панели 2 уровня доступа
 Admin_keyb_lvl2 = InlineKeyboardMarkup()
-Admin_keyb_lvl2.add(InlineKeyboardButton("Утвердить публикацию отзывов о заказах", callback_data="admin_lvl2:admin_orders_rev"))
-Admin_keyb_lvl2.add(InlineKeyboardButton("Утвердить публикацию отзывов о блюдах", callback_data="admin_lvl2:admin_dishes_rev"))
+Admin_keyb_lvl2.add(InlineKeyboardButton("Утвердить отзывы о заказах", callback_data="admin_lvl2:admin_orders_rev"))
+Admin_keyb_lvl2.add(InlineKeyboardButton("Утвердить отзывы о блюдах", callback_data="admin_lvl2:admin_dishes_rev"))
 Admin_keyb_lvl2.add(InlineKeyboardButton("Добавить блюдо", callback_data="admin_lvl2:admin_dish_add"))
 Admin_keyb_lvl2.add(InlineKeyboardButton("Удалить блюдо", callback_data="admin_lvl2:admin_dish_del"))
+Admin_keyb_lvl2.add(InlineKeyboardButton("Блюдо на СТОП", callback_data="admin_lvl2:admin_dish_stop"))
+
 
 
 
@@ -995,7 +998,48 @@ def query_handler(call):
         msg = bot.send_message(call.message.chat.id, f"Данные добавлены в карточку")
         time.sleep(3)
         bot.delete_message(call.message.chat.id, msg.message_id)
+    if call.data.split(':')[1] == "save_new_dish":
+        print("SAVE NEW DISH")
+        d_name = default_dict_add_dish[1][1]
+        print(d_name)
+        d_description = default_dict_add_dish[2][1]
+        print(d_description)
+        d_photo = default_dict_add_dish[10][1]
+        print(d_photo)
+        d_price = float(default_dict_add_dish[3][1])
+        print(d_price)
+        d_time = int(default_dict_add_dish[4][1])
+        print(d_time)
+        d_weight = float(default_dict_add_dish[5][1])
+        print(d_weight)
+        d_unit = default_dict_add_dish[7][1]
+        print(d_unit)
+        d_is_stop = "False"
+        d_count = int(default_dict_add_dish[6][1])
+        print(d_count)
+        d_category_id = int(default_dict_add_dish[8][1].split(":")[0])
+        print(d_category_id)
+        d_subcategory_id = int(default_dict_add_dish[9][1].split(":")[0])
+        print(d_subcategory_id)
+        print(default_dict_add_dish)
+        with conn:
+            conn.execute("INSERT INTO Dish (name, description, photo, price, time, weight, unit, is_stop, count, category_id, subcategory_id) "
+                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                         (d_name, d_description, d_photo, d_price, d_time, d_weight, d_unit, d_is_stop, d_count, d_category_id, d_subcategory_id))  # добавьте новую запись в таблицу "Отзывы"
+        conn.commit()  # сохраняем изменения в базе данных
 
+        bot.send_message(call.message.chat.id, "Новое блюдо добавлено в базу данных", reply_markup=Admin_keyb_lvl2)
+
+# default_dict_add_dish = {1: ["Добавить название", "Название", "Напишите название блюда"],
+#                          2: ["Добавить описание", "Описание", "Добавьте описание блюда"],
+#                          3: ["Указать стоимость", "Стоимость", "Укажите стоимость блюда"],
+#                          4: ["Время готовки, мин.", "Время", "Укажите время приготовления блюда в минутах"],
+#                          5: ["Указать вес/объём", "вес/объём", "Укажите вес/объём блюда в гр./мл."],
+#                          6: ["В наличии шт.", "количество, шт.", "Укажите количество порций блюда в наличии"],
+#                          7: ["Выбрать меру", "гр./мл.", "Выберите меру измерения блюда"],
+#                          8: ["Выбрать категорию", "Категория", "Выберите категорию блюда"],
+#                          9: ["Выбрать субкатегорию", "Субкатегория", "Выберите субкатегорию блюда"],
+#                          10: ["Добавить фото", "ФОТО", "Пришлите фотографию блюда"]}
 
 # обработка ответа пользователя на вопрос о его отзыве на работу ресторана с последующей запись в БД
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Как вы оцениваете работу ресторана?"])
@@ -1140,18 +1184,6 @@ def handler_admin_last_answer(message):
     time.sleep(3)
     bot.delete_message(message.chat.id, msg.message_id)
 
-PHOTO_DIR = 'photo'
-# @bot.message_handler(content_types=['text', 'photo'], func=lambda message: message.reply_to_message and message.reply_to_message.text in question_list[-1])
-# def handler_admin_last_answer(message):
-#     global default_dict_add_dish
-#     new_dish_field = "ФОТО добавлено"
-#     default_dict_add_dish[question_num][1] = new_dish_field
-#     print(default_dict_add_dish)
-#     bot.send_message(message.chat.id, f"Карточка нового блюда:", reply_markup=create_admin_adddish_keyb(default_dict_add_dish))  # обновляем сообщение с клавиатурой
-#     msg = bot.send_message(message.chat.id, f"ФОТО добавлено")
-#     time.sleep(3)
-#     bot.delete_message(message.chat.id, msg.message_id)
-
 
 @bot.message_handler(content_types=['text', 'photo'], func=lambda message: message.reply_to_message and message.reply_to_message.text == "Пришлите фотографию блюда")
 def handle_photo_and_text(message):
@@ -1159,23 +1191,21 @@ def handle_photo_and_text(message):
     if message.text:  # если сообщение содержит текст
         if message.text :  # если текст совпадает с вопросом бота
             bot.reply_to(message, 'Пришлите фотографию блюда', reply_markup=telebot.types.ForceReply())  # отправляем ответ пользователю
-        # else:  # если текст не совпадает с вопросом бота
-        #     bot.reply_to(message, 'Пришлите фотографию блюда', reply_markup=telebot.types.ForceReply())  # отправляем ответ пользователю
     elif message.photo:  # если сообщение содержит фотографию
         file_id = message.photo[-1].file_id  # получаем идентификатор файла
         file_info = bot.get_file(file_id)  # получаем информацию о файле
         file_path = file_info.file_path  # получаем путь к файлу
-        print(str(int(dish_ids[-1]) + 1))  # название фотки будет "айди последнего блюда + 1"
+        print(str(int(dish_ids[-1]) + 1))
         print(file_id, file_info, file_path)
         # file_name = os.path.basename(file_path)  # получаем имя файла
-        file_name = str(int(dish_ids[-1]) + 1) + ".jpg"
+        photo_file_name = str(int(dish_ids[-1]) + 1) + ".jpg"  # название фотки = "айди последнего блюда в БД + 1"
         downloaded_file = bot.download_file(file_path)  # скачиваем файл
         if not os.path.exists(PHOTO_DIR):  # проверяем, существует ли директория для сохранения фотографий
             os.makedirs(PHOTO_DIR)  # если нет, то создаем ее
-        with open(os.path.join(PHOTO_DIR, file_name), 'wb') as f:  # открываем файл для записи в бинарном режиме
+        with open(os.path.join(PHOTO_DIR, photo_file_name), 'wb') as f:  # открываем файл для записи в бинарном режиме
             f.write(downloaded_file)  # записываем скачанный файл
         global default_dict_add_dish
-        new_dish_field = "ФОТО добавлено"
+        new_dish_field = photo_file_name
         default_dict_add_dish[question_num][1] = new_dish_field
         bot.send_message(message.chat.id, f"Карточка нового блюда:", reply_markup=create_admin_adddish_keyb(
             default_dict_add_dish))  # обновляем сообщение с клавиатурой
