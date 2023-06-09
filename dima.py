@@ -225,6 +225,29 @@ def create_admin_reviewdish_keyb(dct):  # функция для создания
     AdminReviewDish_inline_keyb.add(InlineKeyboardButton("Админка", callback_data="admin_lvl2:admin_panel"))
     return AdminReviewDish_inline_keyb
 
+global default_dict_add_dish
+default_dict_add_dish = {1: ["Добавить название", "Название", "Напишите название блюда"],
+                         2: ["Добавить описание", "Описание", "Добавьте описание блюда"],
+                         3: ["Указать стоимость", "Стоимость", "Укажите стоимость блюда"],
+                         4: ["Время готовки, мин.", "Время", "Укажите время приготовления блюда в минутах"],
+                         5: ["Указать вес/объём", "вес/объём", "Укажите вес/объём блюда в гр./мл."],
+                         6: ["В наличии шт.", "количество, шт.", "Укажите количество порций блюда в наличии"],
+                         7: ["Выбрать меру", "гр./мл.", "Выберите меру измерения блюда"],
+                         8: ["Выбрать категорию", "Категория", "Выберите категорию блюда"],
+                         9: ["Выбрать субкатегорию", "Субкатегория", "Выберите субкатегорию блюда"]}
+def create_admin_adddish_keyb(dct):  # функция для создания клавиатуры для добавления блюда в БД, принимает словарь
+    AdminAddDish_inline_keyb = InlineKeyboardMarkup(row_width=2)
+    AdminAddDish_inline_keyb.add(InlineKeyboardButton("Выбрать:", callback_data="qwerty:qwerty"),
+                                 InlineKeyboardButton("Результат:", callback_data="qwerty:qwerty"))  # неактивные кнопки с фиктивным колбэком
+    for key, value in dct.items():
+        AdminAddDish_inline_keyb.add(InlineKeyboardButton(f"{key}. {value[0]}", callback_data=f"admin_add_new_dish:add_dish_{key}"),
+                                     InlineKeyboardButton(f"{value[1]}", callback_data="qwerty:qwerty"))
+    AdminAddDish_inline_keyb.add(InlineKeyboardButton("Сохранить", callback_data="admin_add_dish:save_new_dish"))
+    AdminAddDish_inline_keyb.add(InlineKeyboardButton("Админка", callback_data="admin_lvl2:admin_panel"))
+    AdminAddDish_inline_keyb.add(InlineKeyboardButton("Меню", callback_data="menu:b1"))
+    return AdminAddDish_inline_keyb
+
+
 @bot.message_handler(commands=['start'])
 def start(message):
     bot.send_message(message.chat.id, '''Добро пожаловать в чат-бот "FoodBot". Здесь Вы можете заказать еду по вкусу из ресторана "Літвіны".\nЧто Вас интересует?''', reply_markup=Main_inline_keyb)
@@ -266,7 +289,6 @@ def query_handler(call):
     bot.answer_callback_query(callback_query_id=call.id,)
     if call.data.split(':')[1] == "qwerty":  # неактивные кнопки в админке
         print("qwerty")
-
     if call.data.split(':')[1] == "txt1":
         print("главные категории")
         # Создаем клавиатуру и кнопки для главного меню ресторана (напр., "Японская кухня")
@@ -900,6 +922,55 @@ def query_handler(call):
         time.sleep(3)
         bot.delete_message(call.message.chat.id, msg.message_id)
 
+    if call.data.split(':')[1] == "admin_dish_add":
+        global result_card_for_admin3
+        result_card_for_admin3 = ""
+        # for key, value in default_dict_add_dish.items():
+        #     result_card_for_admin3 += f"{key}: {value}\n"
+        bot.send_message(call.message.chat.id, f"Карточка нового блюда.\n"
+                                               f"Выберите поле и последовательно внесите необходимые данные.",
+                         reply_markup=create_admin_adddish_keyb(default_dict_add_dish))
+    if call.data.split(':')[0] == "admin_add_new_dish":
+        bot.answer_callback_query(call.id)  # подтвердить нажатие
+        global question_num
+        question_num = int(call.data.split(':')[1][9:])
+        question = default_dict_add_dish[question_num][2]
+        print(question)
+        if question in [v[2] for k, v in default_dict_add_dish.items()][:6]:  # запрашиваем у админа сведения для для заполнения таблицы Dish
+            bot.send_message(call.message.chat.id,
+                             f"{question}",
+                             reply_markup=telebot.types.ForceReply())  # соотв-й вопрос админу
+        if question == [v[2] for k, v in default_dict_add_dish.items()][6]:  # выбор меры измерения блюда
+            measure_keyboard = InlineKeyboardMarkup(row_width=2)
+            measure_keyboard.add(InlineKeyboardButton("гр.", callback_data='measure:gr'),
+                                 InlineKeyboardButton("мл.", callback_data='measure:ml'))
+            bot.send_message(call.message.chat.id, f"{question}", reply_markup=measure_keyboard)  # запрашиваем у админа выбор
+        if question == [v[2] for k, v in default_dict_add_dish.items()][7]:  # выбор категории
+            category_question_keyboard = InlineKeyboardMarkup(row_width=2)
+            [category_question_keyboard.add(InlineKeyboardButton(key, callback_data=f"admin:qn:cat:{key}:{value}")) for key, value in
+             column_dict.items()]
+            bot.send_message(call.message.chat.id, f"{question}", reply_markup=category_question_keyboard)  # запрашиваем у админа выбор
+        if question == [v[2] for k, v in default_dict_add_dish.items()][8]:  # выбор субкатегории
+            sub_category_question_keyboard = InlineKeyboardMarkup(row_width=2)
+            [sub_category_question_keyboard.add(InlineKeyboardButton(key, callback_data=f"admin:qn:subcat:{key}:{value}")) for key, value in
+             subcat_dict2.items()]
+            bot.send_message(call.message.chat.id, f"{question}", reply_markup=sub_category_question_keyboard)  # запрашиваем у админа выбор
+    if call.data.split(':')[0] == "measure":
+        bot.answer_callback_query(call.id)  # подтвердить нажатие
+        if call.data.split(':')[1] == "gr":
+            default_dict_add_dish[7][1] = "гр."
+            bot.send_message(call.message.chat.id, f"Карточка нового блюда:", reply_markup=create_admin_adddish_keyb(
+                default_dict_add_dish))  # обновляем сообщение с клавиатурой
+            msg = bot.send_message(call.message.chat.id, f"Данные добавлены в карточку")
+            time.sleep(3)
+            bot.delete_message(call.message.chat.id, msg.message_id)
+        if call.data.split(':')[1] == "ml":
+            default_dict_add_dish[7][1] = "мл."
+            bot.send_message(call.message.chat.id, f"Карточка нового блюда:", reply_markup=create_admin_adddish_keyb(
+                default_dict_add_dish))  # обновляем сообщение с клавиатурой
+            msg = bot.send_message(call.message.chat.id, f"Данные добавлены в карточку")
+            time.sleep(3)
+            bot.delete_message(call.message.chat.id, msg.message_id)
 
 
 # обработка ответа пользователя на вопрос о его отзыве на работу ресторана с последующей запись в БД
@@ -1031,6 +1102,20 @@ def handler_admin_last_answer(message):
         conn.execute(f"UPDATE BotAdmins SET position = ? WHERE telegram_id = ?", (position, tg_id))
     conn.commit()
     bot.send_message(message.chat.id, "Админиcтратор успешно добавлен ", reply_markup=Admin_keyb_lvl1)
+
+question_list = [v[2] for k, v in default_dict_add_dish.items()]
+print(question_list[:6])
+@bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in question_list[:6])
+def handler_admin_last_answer(message):
+    global default_dict_add_dish
+    new_dish_field = message.text
+    default_dict_add_dish[question_num][1] = new_dish_field
+    print(default_dict_add_dish)
+    bot.send_message(message.chat.id, f"Карточка нового блюда:", reply_markup=create_admin_adddish_keyb(default_dict_add_dish))  # обновляем сообщение с клавиатурой
+    msg = bot.send_message(message.chat.id, f"Данные добавлены в карточку")
+    time.sleep(3)
+    bot.delete_message(message.chat.id, msg.message_id)
+
 
 
 print("Ready")
