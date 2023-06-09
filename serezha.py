@@ -1,3 +1,5 @@
+import json
+
 import telebot
 from telebot import types
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -8,11 +10,12 @@ import array, gspread, requests, subprocess, datetime, uuid
 import datetime as DT
 import time
 
+clients_json_id  = []
 
 # logfile = str(datetime.date.today()) + '.log' # формируем имя лог-файла
 token = '5991850571:AAGwpP8X-kv-nN0P55SciR2sMxCvLkGOeuU'
 bot = telebot.TeleBot(token)
-conn = sqlite3.connect('DATABASE/restaurant1.db', check_same_thread=False)
+conn = sqlite3.connect('restaurant1 (2).db', check_same_thread=False)
 markdown = """
     *bold text*
     _italic text_
@@ -429,10 +432,23 @@ def query_handler(call):
         # conn.commit()
         # conn.execute(f'DELETE FROM ShoppingCart WHERE client_id = {call.message.chat.id}')
 
+
+
+
     if call.data.split(':')[1] == "refuse":
         with conn:
             client_address = [i[3] for i in conn.execute(f"SELECT * FROM Clients WHERE telegram_id = {call.message.chat.id}")][0]
-        bot.send_message(call.message.chat.id, f'Ваша заявка оформлена! Ожидайте Ваш заказ по адресу: {client_address} :)')
+            orders_id = [i for i in conn.execute(f'SELECT id FROM Orders WHERE  telegram_id = {call.message.chat.id}')][-1][0]
+        markup_administration = InlineKeyboardMarkup()
+        global information_in_admin_after_click_in_yes
+        information_in_admin_after_click_in_yes = [i[0] for i in conn.execute(
+            f'SELECT ShoppingCart.dish_id FROM ShoppingCart WHERE ShoppingCart.client_id = {call.message.chat.id} AND ShoppingCart.count > 0')]
+        information_in_admin_after_click_in_yes_count = [i[0] for i in conn.execute(
+            f'SELECT ShoppingCart.count FROM ShoppingCart WHERE ShoppingCart.client_id = {call.message.chat.id} AND ShoppingCart.count > 0')][0]
+        information_in_admin_after_click_in_yes_price = [i[0] for i in conn.execute(
+            f'SELECT ShoppingCart.total_price FROM ShoppingCart WHERE ShoppingCart.client_id = {call.message.chat.id} AND ShoppingCart.count > 0')][0]
+        markup_administration.add(InlineKeyboardButton('Поступил заказ', callback_data=f'0:order_is_ready:{orders_id}:{information_in_admin_after_click_in_yes}:{information_in_admin_after_click_in_yes_count}:{information_in_admin_after_click_in_yes_price}'))
+        bot.send_message(call.message.chat.id, f'Ваша заявка оформлена! Ожидайте Ваш заказ по адресу: {client_address} :)', reply_markup=markup_administration)
         orders_table = "INSERT OR IGNORE INTO Orders (client_id, dish_ids, date, telegram_id, comment) values(?, ?, ?, ?, ?)"
         current_datetime = DT.datetime.now()
         telegram_id = call.message.chat.id
@@ -445,35 +461,54 @@ def query_handler(call):
             # print(list_orders_dish)
             j = 0
             for i in list_orders_dish:
-                print(i)
+                # print(i)
                 count_orders = [i[0] for i in conn.execute(
-                    f"SELECT ShoppingCart.count FROM ShoppingCart WHERE {int(i)} = ShoppingCart.dish_id AND ShoppingCart.count > 0")][0]
+                    f"SELECT ShoppingCart.count, ShoppingCart.dish_id FROM ShoppingCart WHERE {int(i)} = ShoppingCart.dish_id AND ShoppingCart.count > 0")][0]
                 dish_ids += str(i) + ':' + str(count_orders) + ', '
                 j += 1
             conn.execute(orders_table, [client_id, dish_ids, current_datetime, telegram_id, comment])
 
         admin_to_information = ''
-        for i in conn.execute(f"SELECT Dish.name, ShoppingCart.count FROM Dish, ShoppingCart WHERE ShoppingCart.client_id = {call.message.chat.id} AND Dish.id = ShoppingCart.dish_id"):
+        for i in conn.execute(f"SELECT Dish.name, ShoppingCart.count, ShoppingCart.client_id FROM Dish, ShoppingCart WHERE ShoppingCart.client_id = {call.message.chat.id} AND Dish.id = ShoppingCart.dish_id"):
             admin_to_information+=f'**НАЗВАНИЕ - {i[0]} КОЛ-ВО:{i[1]}**\n'
-        msg = bot.send_message(chat_id='@restaurantletvin', text=f'Клиент заказал:\n{admin_to_information}', parse_mode="Markdown", reply_markup=markup_administration)
+        global id_msg
+        msge = (bot.send_message(chat_id='@restaurantletvin', text=f'Клиент заказал:\n{admin_to_information}', parse_mode="Markdown", reply_markup=markup_administration).message_id)
+        message_dict_id.setdefault(msge, orders_id)
+        with open(r'C:\Users\admin\MegaBot\id_message.json', 'w+') as file:
+            json.dump(message_dict_id, file , indent=4, ensure_ascii=False)
         conn.execute(f'DELETE FROM ShoppingCart WHERE client_id = {call.message.chat.id}')
-        message_dict_id.setdefault(call.message.chat.id, msg.message_id)
         conn.commit()
 # END code serezha + Dima______________________________________________________________________________________________
 
     if call.data.split(':')[1] == 'order_is_ready':
-
+        # print(call.data.split(':')[2])
         markup_yes_or_no = InlineKeyboardMarkup()
-        markup_yes_or_no.add(InlineKeyboardButton('Да', callback_data='x:yes'), InlineKeyboardButton('Нет', callback_data='y:no'))
+        markup_yes_or_no.add(InlineKeyboardButton('Да', callback_data=f'x:yes:{call.data.split(":")[2]}:{call.data.split(":")[3]}:{call.data.split(":")[4]}:{call.data.split(":")[5]}'), InlineKeyboardButton('Нет', callback_data='y:no'))
         bot.send_message(call.message.chat.id, 'Заказ готов к отправке клиенту?', reply_markup=markup_yes_or_no)
 
     if call.data.split(':')[1] == 'yes':
-        print(message_dict_id)
-        if call.message.chat.id in message_dict_id:
-            print(message_dict_id[call.message.chat.id])
-            xxx = 'ГОТОВО'
-            bot.edit_message_text(xxx, call.message.chat.id, message_dict_id[call.message.chat.id], reply_markup=markup_administration)
-            # bot.delete_message(call.message.chat.id, call.message.message_id)
+        print('ВОТ И ВСЕ',type(call.data.split(":")[3]))
+
+        with open(r'C:\Users\admin\MegaBot\id_message.json', 'r') as file:
+            request = json.load(file)
+            for key, value in request.items():
+                print(key)
+                txt = ''
+                result = information_in_admin_after_click_in_yes
+                if value == int(call.data.split(':')[2]):
+                    with conn:
+                        for j in result:
+                            list_informations_for_adm = [i for i in conn.execute(f'SELECT Dish.name FROM Dish WHERE id = {int(j)}')]
+                            print("МАССИВВВ",list_informations_for_adm)
+                            for i in list_informations_for_adm:
+                                txt+=f'Заказанное блюдо{i}\n' \
+                                     f'Количество: {call.data.split(":")[4]}\n' \
+                                     f'Цена:{call.data.split(":")[5]}'
+                        xxx = f'Заказ успешно оформлен! {txt}'
+                        bot.edit_message_text(xxx, call.message.chat.id, int(key))
+                        bot.delete_message(call.message.chat.id, call.message.message_id)
+
+                # bot.delete_message(call.message.chat.id, call.message.message_id)
 
 
 
@@ -618,15 +653,15 @@ def query_handler(call):
             Reg_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
             bot.send_message(call.message.chat.id, "Чтобы пользоваться чат-ботом, нужно пройти регистрацию.", reply_markup=Reg_inline_keyb)
         else:
-            text=''
+            text=[]
             orders_client = [i for i in cursor.execute(f"SELECT date, dish_ids FROM Orders WHERE telegram_id = {call.from_user.id}")]
             for orders in orders_client:
                 order = orders[1]
                 list_orders = order.split(':')
                 if len(list_orders) == 2:
-                    count = list_orders[1][0]
+                    count2 = list_orders[1][0]
                     s = [i for i in cursor.execute(f"SELECT Dish.name FROM Dish WHERE id = {list_orders[0]}")][0]
-                    text+=f'***{s[0]}***\n {count}шт.\n Дата: {orders[0]}\n'
+                    text.append(f'{s[0]}{count2}шт. Дата: {orders[0]}')
             bot.send_message(call.message.chat.id, f'{text}\n')
             # print(tmp)
 
@@ -697,8 +732,10 @@ def handle_order_answer(message):
     bot.send_message(message.chat.id, 'Спасибо за комментарий! Постараемся учесть Ваши пожелания.\n'
                                       'Ваша заявка оформлена! Ожидайте Ваш заказ :) ', reply_markup=Main_inline_keyb)
 
+    orders_id = [i for i in conn.execute(f'SELECT id FROM Orders WHERE  telegram_id = {message.chat.id}')][-1][0]
+    print(orders_id)
     markup_administration = InlineKeyboardMarkup()
-    markup_administration.add(InlineKeyboardButton('Поступил заказ', callback_data='0:order_is_ready'))
+    markup_administration.add(InlineKeyboardButton('Поступил заказ', callback_data=f'0:order_is_ready:{orders_id}'))
     admin_to_information = ''
     for i in conn.execute(f"SELECT Dish.name, ShoppingCart.count FROM Dish, ShoppingCart WHERE ShoppingCart.client_id = {message.chat.id} AND Dish.id = ShoppingCart.dish_id"):
         admin_to_information += f'**НАЗВАНИЕ - {i[0]} КОЛ-ВО:{i[1]}**\n'
