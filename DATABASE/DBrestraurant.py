@@ -38,10 +38,10 @@ with con:
             description TEXT,
             photo TEXT,
             price FLOAT,
-            time  DATETIME,
+            time  INTEGER,
             weight FLOAT,
             unit TEXT,
-            is_stop BOOLEAN,
+            is_stop TEXT,
             count INTEGER,
             category_id INTEGER,
             FOREIGN KEY (category_id) REFERENCES CategoryDish (id)
