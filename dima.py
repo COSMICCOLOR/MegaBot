@@ -234,7 +234,8 @@ default_dict_add_dish = {1: ["Добавить название", "Назван�
                          6: ["В наличии шт.", "количество, шт.", "Укажите количество порций блюда в наличии"],
                          7: ["Выбрать меру", "гр./мл.", "Выберите меру измерения блюда"],
                          8: ["Выбрать категорию", "Категория", "Выберите категорию блюда"],
-                         9: ["Выбрать субкатегорию", "Субкатегория", "Выберите субкатегорию блюда"]}
+                         9: ["Выбрать субкатегорию", "Субкатегория", "Выберите субкатегорию блюда"],
+                         10: ["Добавить фото", "ФОТО", "Пришлите фотографию блюда"]}
 def create_admin_adddish_keyb(dct):  # функция для создания клавиатуры для добавления блюда в БД, принимает словарь
     AdminAddDish_inline_keyb = InlineKeyboardMarkup(row_width=2)
     AdminAddDish_inline_keyb.add(InlineKeyboardButton("Выбрать:", callback_data="qwerty:qwerty"),
@@ -934,6 +935,7 @@ def query_handler(call):
         bot.answer_callback_query(call.id)  # подтвердить нажатие
         global question_num
         question_num = int(call.data.split(':')[1][9:])
+        print(question_num)
         question = default_dict_add_dish[question_num][2]
         print(question)
         if question in [v[2] for k, v in default_dict_add_dish.items()][:6]:  # запрашиваем у админа сведения для для заполнения таблицы Dish
@@ -947,14 +949,18 @@ def query_handler(call):
             bot.send_message(call.message.chat.id, f"{question}", reply_markup=measure_keyboard)  # запрашиваем у админа выбор
         if question == [v[2] for k, v in default_dict_add_dish.items()][7]:  # выбор категории
             category_question_keyboard = InlineKeyboardMarkup(row_width=2)
-            [category_question_keyboard.add(InlineKeyboardButton(key, callback_data=f"admin:qn:cat:{key}:{value}")) for key, value in
+            [category_question_keyboard.add(InlineKeyboardButton(key, callback_data=f"qn_cat:{key}:{value}")) for key, value in
              column_dict.items()]
             bot.send_message(call.message.chat.id, f"{question}", reply_markup=category_question_keyboard)  # запрашиваем у админа выбор
         if question == [v[2] for k, v in default_dict_add_dish.items()][8]:  # выбор субкатегории
             sub_category_question_keyboard = InlineKeyboardMarkup(row_width=2)
-            [sub_category_question_keyboard.add(InlineKeyboardButton(key, callback_data=f"admin:qn:subcat:{key}:{value}")) for key, value in
+            [sub_category_question_keyboard.add(InlineKeyboardButton(key, callback_data=f"qn_subcat:{key}:{value}")) for key, value in
              subcat_dict2.items()]
-            bot.send_message(call.message.chat.id, f"{question}", reply_markup=sub_category_question_keyboard)  # запрашиваем у админа выбор
+            bot.send_message(call.message.chat.id, f"{question}", reply_markup=sub_category_question_keyboard)  # запрашиваем у админа фото
+        if question == [v[2] for k, v in default_dict_add_dish.items()][9]:  # добавить фото
+            bot.send_message(call.message.chat.id,
+                             f"{question}",
+                             reply_markup=telebot.types.ForceReply())  # соотв-й вопрос админу
     if call.data.split(':')[0] == "measure":
         bot.answer_callback_query(call.id)  # подтвердить нажатие
         if call.data.split(':')[1] == "gr":
@@ -971,6 +977,24 @@ def query_handler(call):
             msg = bot.send_message(call.message.chat.id, f"Данные добавлены в карточку")
             time.sleep(3)
             bot.delete_message(call.message.chat.id, msg.message_id)
+    if call.data.split(':')[0] == "qn_cat":
+        print(call.data.split(':')[0])
+        bot.answer_callback_query(call.id)  # подтвердить нажатие
+        category_id_qn, category_name_qn = call.data.split(':')[2], call.data.split(':')[1]
+        default_dict_add_dish[8][1] = f"{category_id_qn}: {category_name_qn}"
+        bot.send_message(call.message.chat.id, f"Карточка нового блюда:", reply_markup=create_admin_adddish_keyb(default_dict_add_dish))  # обновляем сообщение с клавиатурой
+        msg = bot.send_message(call.message.chat.id, f"Данные добавлены в карточку")
+        time.sleep(3)
+        bot.delete_message(call.message.chat.id, msg.message_id)
+    if call.data.split(':')[0] == "qn_subcat":
+        print(call.data.split(':')[0])
+        bot.answer_callback_query(call.id)  # подтвердить нажатие
+        subcategory_id_qn, subcategory_name_qn = call.data.split(':')[2], call.data.split(':')[1]
+        default_dict_add_dish[9][1] = f"{subcategory_id_qn}: {subcategory_name_qn}"
+        bot.send_message(call.message.chat.id, f"Карточка нового блюда:", reply_markup=create_admin_adddish_keyb(default_dict_add_dish))  # обновляем сообщение с клавиатурой
+        msg = bot.send_message(call.message.chat.id, f"Данные добавлены в карточку")
+        time.sleep(3)
+        bot.delete_message(call.message.chat.id, msg.message_id)
 
 
 # обработка ответа пользователя на вопрос о его отзыве на работу ресторана с последующей запись в БД
@@ -1115,6 +1139,55 @@ def handler_admin_last_answer(message):
     msg = bot.send_message(message.chat.id, f"Данные добавлены в карточку")
     time.sleep(3)
     bot.delete_message(message.chat.id, msg.message_id)
+
+PHOTO_DIR = 'photo'
+# @bot.message_handler(content_types=['text', 'photo'], func=lambda message: message.reply_to_message and message.reply_to_message.text in question_list[-1])
+# def handler_admin_last_answer(message):
+#     global default_dict_add_dish
+#     new_dish_field = "ФОТО добавлено"
+#     default_dict_add_dish[question_num][1] = new_dish_field
+#     print(default_dict_add_dish)
+#     bot.send_message(message.chat.id, f"Карточка нового блюда:", reply_markup=create_admin_adddish_keyb(default_dict_add_dish))  # обновляем сообщение с клавиатурой
+#     msg = bot.send_message(message.chat.id, f"ФОТО добавлено")
+#     time.sleep(3)
+#     bot.delete_message(message.chat.id, msg.message_id)
+
+
+@bot.message_handler(content_types=['text', 'photo'], func=lambda message: message.reply_to_message and message.reply_to_message.text == "Пришлите фотографию блюда")
+def handle_photo_and_text(message):
+
+    if message.text:  # если сообщение содержит текст
+        if message.text :  # если текст совпадает с вопросом бота
+            bot.reply_to(message, 'Пришлите фотографию блюда', reply_markup=telebot.types.ForceReply())  # отправляем ответ пользователю
+        # else:  # если текст не совпадает с вопросом бота
+        #     bot.reply_to(message, 'Пришлите фотографию блюда', reply_markup=telebot.types.ForceReply())  # отправляем ответ пользователю
+    elif message.photo:  # если сообщение содержит фотографию
+        file_id = message.photo[-1].file_id  # получаем идентификатор файла
+        file_info = bot.get_file(file_id)  # получаем информацию о файле
+        file_path = file_info.file_path  # получаем путь к файлу
+        print(str(int(dish_ids[-1]) + 1))  # название фотки будет "айди последнего блюда + 1"
+        print(file_id, file_info, file_path)
+        # file_name = os.path.basename(file_path)  # получаем имя файла
+        file_name = str(int(dish_ids[-1]) + 1) + ".jpg"
+        downloaded_file = bot.download_file(file_path)  # скачиваем файл
+        if not os.path.exists(PHOTO_DIR):  # проверяем, существует ли директория для сохранения фотографий
+            os.makedirs(PHOTO_DIR)  # если нет, то создаем ее
+        with open(os.path.join(PHOTO_DIR, file_name), 'wb') as f:  # открываем файл для записи в бинарном режиме
+            f.write(downloaded_file)  # записываем скачанный файл
+        global default_dict_add_dish
+        new_dish_field = "ФОТО добавлено"
+        default_dict_add_dish[question_num][1] = new_dish_field
+        bot.send_message(message.chat.id, f"Карточка нового блюда:", reply_markup=create_admin_adddish_keyb(
+            default_dict_add_dish))  # обновляем сообщение с клавиатурой
+        msg1 = bot.reply_to(message, 'Фото успешно сохранено!')  # отправляем ответ пользователю
+        time.sleep(3)
+        bot.delete_message(message.chat.id, msg1.message_id)
+        # msg = bot.send_message(message.chat.id, f"ФОТО добавлено")
+        # time.sleep(3)
+        # bot.delete_message(message.chat.id, msg.message_id)
+
+
+
 
 
 
