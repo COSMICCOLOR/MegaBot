@@ -7,21 +7,24 @@ import os
 import array, gspread, requests, subprocess, datetime, uuid
 import datetime as DT
 import time
+import json
 
 
 # logfile = str(datetime.date.today()) + '.log' # формируем имя лог-файла
 token = '6112420224:AAFd0gDtUiAC2qqWo4osq82D6qyGH07c_UY'
 bot = telebot.TeleBot(token)
 PHOTO_DIR = 'photo'
-conn = sqlite3.connect('restaurant1.db', check_same_thread=False)
+conn = sqlite3.connect('DATABASE/restaurant1.db', check_same_thread=False)
 markdown = """
     *bold text*
     _italic text_
     [text](URL)
     """
 
-global dish_dict
+clients_json_id = []
+message_dict_id = {}
 
+global dish_dict
 try:
     with conn:
         cursor = conn.cursor()
@@ -63,14 +66,15 @@ except Exception as e:
     print(e)
 try:
     with conn:
-        data = conn.execute("SELECT * FROM Dish")
-        print(data.fetchall())
-        cursor = conn.cursor()
-        cursor.execute(f"SELECT * FROM Dish")
-        data2 = cursor.fetchall()  # fetchone
-        dish_names = [i[1] for i in conn.execute(f"SELECT * FROM Dish")]
-        dish_cat_ids = [str(i[11]) for i in conn.execute(f"SELECT * FROM Dish")]
+        # data = conn.execute("SELECT * FROM Dish")
+        # print(data.fetchall())
+        # cursor = conn.cursor()
+        # cursor.execute(f"SELECT * FROM Dish")
+        # data2 = cursor.fetchall()  # fetchone
+        dish_names = [i[1] for i in conn.execute(f"SELECT * FROM Dish WHERE is_stop = 'В продаже'")]
+        dish_cat_ids = [str(i[11]) for i in conn.execute(f"SELECT * FROM Dish WHERE is_stop = 'В продаже'")]
         dish_ids = [str(i[0]) for i in conn.execute(f"SELECT * FROM Dish")]
+        dish_status = [i[8] for i in conn.execute(f"SELECT * FROM Dish")]
         dish_dict2 = dict(zip(dish_names, dish_ids))
         dish_dict = dict(zip(dish_names, dish_cat_ids))
         dish_all_dict = dict(zip(dish_names, [[i[1], i[2], i[3], i[4], i[5], i[6], i[7], i[9], i[0]] for i in conn.execute(f"SELECT * FROM Dish")]))
@@ -125,8 +129,12 @@ Admin_keyb_lvl2 = InlineKeyboardMarkup()
 Admin_keyb_lvl2.add(InlineKeyboardButton("Утвердить отзывы о заказах", callback_data="admin_lvl2:admin_orders_rev"))
 Admin_keyb_lvl2.add(InlineKeyboardButton("Утвердить отзывы о блюдах", callback_data="admin_lvl2:admin_dishes_rev"))
 Admin_keyb_lvl2.add(InlineKeyboardButton("Добавить блюдо", callback_data="admin_lvl2:admin_dish_add"))
-Admin_keyb_lvl2.add(InlineKeyboardButton("Удалить блюдо", callback_data="admin_lvl2:admin_dish_del"))
 Admin_keyb_lvl2.add(InlineKeyboardButton("Блюдо на СТОП", callback_data="admin_lvl2:admin_dish_stop"))
+
+global msg_to_admin
+msg_to_admin = 'Поступил заказ'
+markup_administration = InlineKeyboardMarkup()
+markup_administration.add(InlineKeyboardButton(msg_to_admin, callback_data='0:order_is_ready'))
 
 
 
@@ -231,10 +239,10 @@ def create_admin_reviewdish_keyb(dct):  # функция для создания
 global default_dict_add_dish
 default_dict_add_dish = {1: ["Добавить название", "Название", "Напишите название блюда"],
                          2: ["Добавить описание", "Описание", "Добавьте описание блюда"],
-                         3: ["Указать стоимость", "Стоимость", "Укажите стоимость блюда"],
-                         4: ["Время готовки, мин.", "Время", "Укажите время приготовления блюда в минутах"],
-                         5: ["Указать вес/объём", "вес/объём", "Укажите вес/объём блюда в гр./мл."],
-                         6: ["В наличии шт.", "количество, шт.", "Укажите количество порций блюда в наличии"],
+                         3: ["Указать стоимость", "0.0", "Укажите стоимость блюда"],
+                         4: ["Время готовки, мин.", "0", "Укажите время приготовления блюда в минутах"],
+                         5: ["Указать вес/объём", "0.0", "Укажите вес/объём блюда в гр./мл."],
+                         6: ["В наличии шт.", "0", "Укажите количество порций блюда в наличии"],
                          7: ["Выбрать меру", "гр./мл.", "Выберите меру измерения блюда"],
                          8: ["Выбрать категорию", "Категория", "Выберите категорию блюда"],
                          9: ["Выбрать субкатегорию", "Субкатегория", "Выберите субкатегорию блюда"],
@@ -250,6 +258,21 @@ def create_admin_adddish_keyb(dct):  # функция для создания к
     AdminAddDish_inline_keyb.add(InlineKeyboardButton("Админка", callback_data="admin_lvl2:admin_panel"))
     AdminAddDish_inline_keyb.add(InlineKeyboardButton("Меню", callback_data="menu:b1"))
     return AdminAddDish_inline_keyb
+
+
+
+def create_admin_stop_dish_keyboard(dct):  # функция для создания клавиатуры для STOP блюда в БД, принимает словарь
+    AdminDelDish_inline_keyb = InlineKeyboardMarkup(row_width=2)
+    # AdminDelDish_inline_keyb.add(InlineKeyboardButton("Блюдо:                       Статус:", callback_data="qwerty:qwerty"))  # неактивные кнопки с фиктивным колбэком
+    for key, value in dct.items():
+        # with conn:
+            # stop_status = [i[8] for i in conn.execute(f"SELECT * FROM Dish WHERE id = {value}")][0]
+            # print(stop_status)
+        AdminDelDish_inline_keyb.add(InlineKeyboardButton(f"{key}. {value[0]}: {value[1]}", callback_data=f"qwerty:qwerty"))
+        AdminDelDish_inline_keyb.add(InlineKeyboardButton("Изменить\u2705", callback_data=f"stop_dish:{value[1]}:{key}"))
+    AdminDelDish_inline_keyb.add(InlineKeyboardButton("Меню", callback_data="menu:b1"))
+    AdminDelDish_inline_keyb.add(InlineKeyboardButton("Админка", callback_data="admin_lvl2:admin_panel"))
+    return AdminDelDish_inline_keyb
 
 
 @bot.message_handler(commands=['start'])
@@ -587,7 +610,24 @@ def query_handler(call):
     if call.data.split(':')[1] == "refuse":
         with conn:
             client_address = [i[3] for i in conn.execute(f"SELECT * FROM Clients WHERE telegram_id = {call.message.chat.id}")][0]
-        bot.send_message(call.message.chat.id, f'Ваша заявка оформлена! Ожидайте Ваш заказ по адресу: {client_address} :)', reply_markup=Main_inline_keyb)
+            orders_id = [i for i in conn.execute(f'SELECT id FROM Orders WHERE  telegram_id = {call.message.chat.id}')][-1][0]
+        markup_administration = InlineKeyboardMarkup()
+        global information_in_admin_after_click_in_yes
+        information_in_admin_after_click_in_yes = [i[0] for i in conn.execute(
+            f'SELECT ShoppingCart.dish_id FROM ShoppingCart WHERE ShoppingCart.client_id = {call.message.chat.id} '
+            f'AND ShoppingCart.count > 0')]
+        information_in_admin_after_click_in_yes_count = [i[0] for i in conn.execute(
+            f'SELECT ShoppingCart.count FROM ShoppingCart WHERE ShoppingCart.client_id = {call.message.chat.id} '
+            f'AND ShoppingCart.count > 0')][0]
+        information_in_admin_after_click_in_yes_price = [i[0] for i in conn.execute(
+            f'SELECT ShoppingCart.total_price FROM ShoppingCart WHERE ShoppingCart.client_id = {call.message.chat.id} '
+            f'AND ShoppingCart.count > 0')][0]
+        markup_administration.add(InlineKeyboardButton('Поступил заказ',
+                                                       callback_data=f'0:order_is_ready:{orders_id}:'
+                                                                     f'{information_in_admin_after_click_in_yes}:'
+                                                                     f'{information_in_admin_after_click_in_yes_count}:'
+                                                                     f'{information_in_admin_after_click_in_yes_price}'))
+        bot.send_message(call.message.chat.id, f'Ваша заявка оформлена! Ожидайте Ваш заказ по адресу: {client_address}:)', reply_markup=Main_inline_keyb)
         orders_table = "INSERT OR IGNORE INTO Orders (client_id, dish_ids, total_price, date, telegram_id, comment) values(?, ?, ?, ?, ?, ?)"
         current_datetime = DT.datetime.now()
         telegram_id = call.message.chat.id
@@ -611,7 +651,49 @@ def query_handler(call):
         with conn:
             conn.execute(f'DELETE FROM ShoppingCart WHERE client_id = {call.message.chat.id}')
         conn.commit()
+        admin_to_information = ''
+        for i in conn.execute(
+                f"SELECT Dish.name, ShoppingCart.count, ShoppingCart.client_id FROM Dish, ShoppingCart "
+                f"WHERE ShoppingCart.client_id = {call.message.chat.id} AND Dish.id = ShoppingCart.dish_id"):
+            admin_to_information += f'**НАЗВАНИЕ - {i[0]} КОЛ-ВО:{i[1]}**\n'
+        global id_msg
+        msge = (bot.send_message(chat_id='@restaurantletvin', text=f'Клиент заказал:\n{admin_to_information}',
+                                 parse_mode="Markdown", reply_markup=markup_administration).message_id)
+        message_dict_id.setdefault(msge, orders_id)
+        with open(r'C:\Users\admin\MegaBot\id_message.json', 'w+') as file:
+            json.dump(message_dict_id, file, indent=4, ensure_ascii=False)
+        conn.commit()
 # END code serezha + Dima_______________________________________________________________________________________________
+    if call.data.split(':')[1] == 'order_is_ready':
+        # print(call.data.split(':')[2])
+        markup_yes_or_no = InlineKeyboardMarkup()
+        markup_yes_or_no.add(InlineKeyboardButton('Да', callback_data=f'x:yes:{call.data.split(":")[2]}:{call.data.split(":")[3]}:{call.data.split(":")[4]}:{call.data.split(":")[5]}'), InlineKeyboardButton('Нет', callback_data='y:no'))
+        bot.send_message(call.message.chat.id, 'Заказ готов к отправке клиенту?', reply_markup=markup_yes_or_no)
+
+    if call.data.split(':')[1] == 'yes':
+        print('ВОТ И ВСЕ', type(call.data.split(":")[3]))
+        with open(r'C:\Users\admin\MegaBot\id_message.json', 'r') as file:
+            request = json.load(file)
+            for key, value in request.items():
+                print(key)
+                txt = ''
+                result = information_in_admin_after_click_in_yes
+                if value == int(call.data.split(':')[2]):
+                    with conn:
+                        for j in result:
+                            list_informations_for_adm = [i for i in conn.execute(f'SELECT Dish.name FROM Dish WHERE id = {int(j)}')]
+                            print("МАССИВВВ",list_informations_for_adm)
+                            for i in list_informations_for_adm:
+                                txt += f'Заказанное блюдо{i}\n'\
+                                       f'Количество: {call.data.split(":")[4]}\n' \
+                                       f'Цена:{call.data.split(":")[5]}'
+                        msg_to_admin = f'Заказ успешно оформлен! {txt}'
+                        bot.edit_message_text(msg_to_admin, call.message.chat.id, int(key))
+                        bot.delete_message(call.message.chat.id, call.message.message_id)
+
+                # bot.delete_message(call.message.chat.id, call.message.message_id)
+
+
 
     if call.data.split(':')[1] == "b3":
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Sub_inline_keyb)
@@ -850,7 +932,7 @@ def query_handler(call):
         bot.send_message(call.message.chat.id,
                          "Админ-панель 2 уровня.\n"
                          "Функционал:\n"
-                         "- Добавление и удаление блюда;\n"
+                         "- Добавление нового блюда;\n"
                          "- Постановка блюда на СТОП\n"
                          "- Обработка отзывов.", reply_markup=Admin_keyb_lvl2)
     if call.data.split(':')[1] == "admin_dishes_rev":
@@ -1001,26 +1083,16 @@ def query_handler(call):
     if call.data.split(':')[1] == "save_new_dish":
         print("SAVE NEW DISH")
         d_name = default_dict_add_dish[1][1]
-        print(d_name)
         d_description = default_dict_add_dish[2][1]
-        print(d_description)
         d_photo = default_dict_add_dish[10][1]
-        print(d_photo)
         d_price = float(default_dict_add_dish[3][1])
-        print(d_price)
         d_time = int(default_dict_add_dish[4][1])
-        print(d_time)
         d_weight = float(default_dict_add_dish[5][1])
-        print(d_weight)
         d_unit = default_dict_add_dish[7][1]
-        print(d_unit)
         d_is_stop = "False"
         d_count = int(default_dict_add_dish[6][1])
-        print(d_count)
         d_category_id = int(default_dict_add_dish[8][1].split(":")[0])
-        print(d_category_id)
         d_subcategory_id = int(default_dict_add_dish[9][1].split(":")[0])
-        print(d_subcategory_id)
         print(default_dict_add_dish)
         with conn:
             conn.execute("INSERT INTO Dish (name, description, photo, price, time, weight, unit, is_stop, count, category_id, subcategory_id) "
@@ -1030,16 +1102,53 @@ def query_handler(call):
 
         bot.send_message(call.message.chat.id, "Новое блюдо добавлено в базу данных", reply_markup=Admin_keyb_lvl2)
 
-# default_dict_add_dish = {1: ["Добавить название", "Название", "Напишите название блюда"],
-#                          2: ["Добавить описание", "Описание", "Добавьте описание блюда"],
-#                          3: ["Указать стоимость", "Стоимость", "Укажите стоимость блюда"],
-#                          4: ["Время готовки, мин.", "Время", "Укажите время приготовления блюда в минутах"],
-#                          5: ["Указать вес/объём", "вес/объём", "Укажите вес/объём блюда в гр./мл."],
-#                          6: ["В наличии шт.", "количество, шт.", "Укажите количество порций блюда в наличии"],
-#                          7: ["Выбрать меру", "гр./мл.", "Выберите меру измерения блюда"],
-#                          8: ["Выбрать категорию", "Категория", "Выберите категорию блюда"],
-#                          9: ["Выбрать субкатегорию", "Субкатегория", "Выберите субкатегорию блюда"],
-#                          10: ["Добавить фото", "ФОТО", "Пришлите фотографию блюда"]}
+    if call.data.split(':')[1] == "admin_dish_stop":
+        try:
+            with conn:
+                dish_id = [i[0] for i in conn.execute(f"SELECT * FROM Dish")]
+                dish_name = [i[1] for i in conn.execute(f"SELECT * FROM Dish")]
+                status_dish = [i[8] for i in conn.execute(f"SELECT * FROM Dish")]
+                global status_dish_result_dict
+                status_dish_result_dict = {}
+                for key, value1, value2 in zip(dish_id, dish_name, status_dish):
+                    status_dish_result_dict[key] = [value1, value2]
+                print("СЛОВАРЬ статуса блюд для админа", status_dish_result_dict)
+        except Exception as e:
+            print(e)
+        bot.send_message(call.message.chat.id, f"Изменение статуса блюда:", reply_markup=create_admin_stop_dish_keyboard(status_dish_result_dict))
+    if call.data.split(':')[0] == "stop_dish":  # если нажата кнопка "Изменить"
+        print(call.data.split(':')[1])
+        if call.data.split(':')[1] == "В продаже":
+            status_dish_result_dict[int(call.data.split(':')[2])][1] = "Не продается"
+            try:
+                with conn:
+                    conn.execute(f"UPDATE Dish SET is_stop = ? WHERE id = ?",
+                                 (status_dish_result_dict[int(call.data.split(':')[2])][1], int(call.data.split(':')[2])))
+                conn.commit()
+            except Exception as e:
+                print(e)
+            bot.edit_message_text(f"Изменение статуса блюда:", call.message.chat.id, call.message.message_id,
+                                  reply_markup=create_admin_stop_dish_keyboard(
+                                      status_dish_result_dict))  # обновляем сообщение с клавиатурой
+            msg_status = bot.send_message(call.message.chat.id, f"Статус для блюда {call.data.split(':')[2]} обновлён")
+            time.sleep(3)
+            bot.delete_message(call.message.chat.id, msg_status.message_id)
+        if call.data.split(':')[1] == "Не продается":
+            status_dish_result_dict[int(call.data.split(':')[2])][1] = "В продаже"
+            try:
+                with conn:
+                    conn.execute(f"UPDATE Dish SET is_stop = ? WHERE id = ?",
+                                 ("В продаже", int(call.data.split(':')[2])))
+                conn.commit()
+            except Exception as e:
+                print(e)
+            bot.edit_message_text(f"Изменение статуса блюда:", call.message.chat.id, call.message.message_id,
+                                  reply_markup=create_admin_stop_dish_keyboard(status_dish_result_dict))  # обновляем сообщение с клавиатурой
+            msg_status = bot.send_message(call.message.chat.id, f"Статус для блюда {call.data.split(':')[2]} обновлён")
+            time.sleep(3)
+            bot.delete_message(call.message.chat.id, msg_status.message_id)
+
+
 
 # обработка ответа пользователя на вопрос о его отзыве на работу ресторана с последующей запись в БД
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Как вы оцениваете работу ресторана?"])
@@ -1124,6 +1233,18 @@ def handle_order_answer(message):
     conn.commit()
     bot.send_message(message.chat.id, 'Спасибо за комментарий! Постараемся учесть Ваши пожелания.\n'
                                       'Ваша заявка оформлена! Ожидайте Ваш заказ :) ', reply_markup=Main_inline_keyb)
+    orders_id = [i for i in conn.execute(f'SELECT id FROM Orders WHERE  telegram_id = {message.chat.id}')][-1][0]
+    print(orders_id)
+    markup_administration = InlineKeyboardMarkup()
+    markup_administration.add(InlineKeyboardButton('Поступил заказ', callback_data=f'0:order_is_ready:{orders_id}'))
+    admin_to_information = ''
+    for i in conn.execute(
+            f"SELECT Dish.name, ShoppingCart.count FROM Dish, ShoppingCart WHERE ShoppingCart.client_id = {message.chat.id} "
+            f"AND Dish.id = ShoppingCart.dish_id"):
+        admin_to_information += f'**НАЗВАНИЕ - {i[0]} КОЛ-ВО:{i[1]}**\n'
+    bot.send_message(chat_id='@restaurantletvin', text=f'Клиент заказал:\n{admin_to_information}',
+                     parse_mode="Markdown", reply_markup=markup_administration)
+    conn.execute(f'DELETE FROM ShoppingCart WHERE client_id = {message.chat.id}')
 
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Введите telegram id нового администратора"])
 def handler_admin_first_answer(message):
@@ -1189,8 +1310,7 @@ def handler_admin_last_answer(message):
 def handle_photo_and_text(message):
 
     if message.text:  # если сообщение содержит текст
-        if message.text :  # если текст совпадает с вопросом бота
-            bot.reply_to(message, 'Пришлите фотографию блюда', reply_markup=telebot.types.ForceReply())  # отправляем ответ пользователю
+        bot.reply_to(message, 'Пришлите фотографию блюда', reply_markup=telebot.types.ForceReply())  # отправляем ответ пользователю
     elif message.photo:  # если сообщение содержит фотографию
         file_id = message.photo[-1].file_id  # получаем идентификатор файла
         file_info = bot.get_file(file_id)  # получаем информацию о файле
