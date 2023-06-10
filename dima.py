@@ -49,6 +49,7 @@ try:
         subcat_dict3 = {k: ''.join([d[k] for d in (subcat_dict, subcat_dict2)]) for k in subcat_dict.keys()}  # словарь {название субкатегории: 'id CategoryDish+id SubCategory'} значение из двух айдишек будем потом разбивать в колбэк дате
 except Exception as e:
     print(e)
+
 try:
     with conn:
         global client_id
@@ -64,6 +65,7 @@ try:
         print(type(orders_telegram_id[0]), orders_telegram_id)
 except Exception as e:
     print(e)
+
 try:
     with conn:
         # data = conn.execute("SELECT * FROM Dish")
@@ -137,8 +139,6 @@ markup_administration = InlineKeyboardMarkup()
 markup_administration.add(InlineKeyboardButton(msg_to_admin, callback_data='0:order_is_ready'))
 
 
-
-
 """***START Функция для создания клавиатуры с обновляемой кнопкой количества заказываемого блюда START***"""
 count = 1  # переменная для хранения количества добавляемого в корзину блюда
 def create_keyboard(dish_id):  # функция для создания клавиатуры под карточкой блюда
@@ -197,8 +197,7 @@ def create_edit_cart_keyb(dct):  # функция для создания кла
     Clear_basket_keyb.add(InlineKeyboardButton("Меню", callback_data="menu:b1"))
     return Clear_basket_keyb
 
-# global current_review_status
-# current_review_status = "Не установлен"
+
 def create_admin_review_keyb(dct):  # функция для создания клавиатуры для утверждения отзывов о заказах, принимает словарь
     AdminReviewOrder_inline_keyb = InlineKeyboardMarkup(row_width=4)
     AdminReviewOrder_inline_keyb.add(InlineKeyboardButton("Номер", callback_data="qwerty:qwerty"),
@@ -236,6 +235,7 @@ def create_admin_reviewdish_keyb(dct):  # функция для создания
     AdminReviewDish_inline_keyb.add(InlineKeyboardButton("Админка", callback_data="admin_lvl2:admin_panel"))
     return AdminReviewDish_inline_keyb
 
+
 global default_dict_add_dish
 default_dict_add_dish = {1: ["Добавить название", "Название", "Напишите название блюда"],
                          2: ["Добавить описание", "Описание", "Добавьте описание блюда"],
@@ -260,7 +260,6 @@ def create_admin_adddish_keyb(dct):  # функция для создания к
     return AdminAddDish_inline_keyb
 
 
-
 def create_admin_stop_dish_keyboard(dct):  # функция для создания клавиатуры для STOP блюда в БД, принимает словарь
     AdminDelDish_inline_keyb = InlineKeyboardMarkup(row_width=2)
     # AdminDelDish_inline_keyb.add(InlineKeyboardButton("Блюдо:                       Статус:", callback_data="qwerty:qwerty"))  # неактивные кнопки с фиктивным колбэком
@@ -281,6 +280,7 @@ def start(message):
     global user_telegram_id
     user_telegram_id = message.from_user.id
     # print(type(user_telegram_id), message.from_user.id)
+
 
 @bot.message_handler(commands=['addadmin'])
 def add_admin(message):
@@ -502,8 +502,6 @@ def query_handler(call):
             bot.send_message(call.message.chat.id,
                              "Вы ещё не заказывали у нас такое блюдо.",
                              reply_markup=DishReviewError_inline_keyb)  # выдать клаву если пользователь ранее не заказывал блюдо
-
-
         """START Removing items from the cart START"""
     if call.data.split(':')[1] == 'clear_basket':
         # все айди блюд конкретного юзера в корзине + их количество
@@ -524,7 +522,6 @@ def query_handler(call):
         #отправляем пользователю созданную в функции create_edit_cart_keyb(dish_name_id_count_dict) клавиатуру
         bot.send_message(call.message.chat.id, "Здесь Вы можете редактировать количество добавленных в корзину блюд"
                                                " с помощью кнопок + - удалить", reply_markup=create_edit_cart_keyb(dish_name_id_count_dict))
-
     bot.answer_callback_query(call.id)  # подтверждаем нажатие
     print("HELLO FROM CART", call.data.split(":"))
     if call.data.split(':')[0] == "dish-":  # если нажата кнопка "-" ['dish_minus', '-', 'Нигири Сяке', '14', '1']
@@ -571,7 +568,6 @@ def query_handler(call):
         msg = bot.send_message(call.message.chat.id, "Блюдо удалено из корзины")
         time.sleep(3)
         bot.delete_message(call.message.chat.id, msg.message_id)
-
     if call.data.split(':')[1] == "clear_basket_all":  # удаление из корзины всех данных пользователя по id telegram
         After_clear_basket_keyb = InlineKeyboardMarkup(row_width=2)
         After_clear_basket_keyb.add(InlineKeyboardButton("Показать корзину", callback_data="menu:txt3"),
@@ -584,12 +580,7 @@ def query_handler(call):
         msg = bot.send_message(call.message.chat.id, 'Корзина успешно очищена!')
         time.sleep(3)
         bot.delete_message(call.message.chat.id, msg.message_id)
-        """!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"""
-    # if call.data.split(':')[1] in dish_names:
-    #     print("lineeeee 408-409 call.data.split(':')[1] in dish_names", call.data.split(":")[0])
-    #     conn.execute(f'DELETE FROM ShoppingCart WHERE ShoppingCart.dish_id = {call.data.split(":")[0]}')
     """END Removing items from the cart END"""
-
     if call.data.split(':')[1] == 'Оформить заказ':
         Comment_keyb = InlineKeyboardMarkup()
         Comment_keyb.add(InlineKeyboardButton("Да", callback_data="user_basket:doit"))
@@ -602,7 +593,6 @@ def query_handler(call):
                                                    "добавить комментарий к заказу?", reply_markup=Comment_keyb)
         else:
             bot.send_message(call.message.chat.id, "Ваша корзина ещё пуста. Добавьте блюда в корзину.", reply_markup=Main_inline_keyb)
-
     if call.data.split(':')[1] == "doit":
         bot.answer_callback_query(call.id)  # подтверждаем нажатие
         bot.send_message(call.message.chat.id, "Укажите дополнительную информацию к своему заказу.",
@@ -663,13 +653,11 @@ def query_handler(call):
         with open(r'C:\Users\admin\MegaBot\id_message.json', 'w+') as file:
             json.dump(message_dict_id, file, indent=4, ensure_ascii=False)
         conn.commit()
-# END code serezha + Dima_______________________________________________________________________________________________
     if call.data.split(':')[1] == 'order_is_ready':
         # print(call.data.split(':')[2])
         markup_yes_or_no = InlineKeyboardMarkup()
         markup_yes_or_no.add(InlineKeyboardButton('Да', callback_data=f'x:yes:{call.data.split(":")[2]}:{call.data.split(":")[3]}:{call.data.split(":")[4]}:{call.data.split(":")[5]}'), InlineKeyboardButton('Нет', callback_data='y:no'))
         bot.send_message(call.message.chat.id, 'Заказ готов к отправке клиенту?', reply_markup=markup_yes_or_no)
-
     if call.data.split(':')[1] == 'yes':
         print('ВОТ И ВСЕ', type(call.data.split(":")[3]))
         with open(r'C:\Users\admin\MegaBot\id_message.json', 'r') as file:
@@ -690,11 +678,6 @@ def query_handler(call):
                         msg_to_admin = f'Заказ успешно оформлен! {txt}'
                         bot.edit_message_text(msg_to_admin, call.message.chat.id, int(key))
                         bot.delete_message(call.message.chat.id, call.message.message_id)
-
-                # bot.delete_message(call.message.chat.id, call.message.message_id)
-
-
-
     if call.data.split(':')[1] == "b3":
         bot.send_message(call.message.chat.id, "Выберите категорию", reply_markup=Sub_inline_keyb)
     """___Обработка коллбэка от кнопки 'О нас'___"""
@@ -733,11 +716,9 @@ def query_handler(call):
         AfterReview_inline_keyb = InlineKeyboardMarkup()
         AfterReview_inline_keyb.add(InlineKeyboardButton("Оставить отзыв", callback_data="feedback:r3"))
         AfterReview_inline_keyb.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
-
         result_card = ""
         for key, value in review_order_dict.items():
             result_card += f"\U0001F5E8{client_dict[value]}: '{key}'\n\n"
-
         print("СЛОВАРЬ С ОТЗЫВАМИ О ЗАКАЗАХ", result_card)
         if len(result_card) != 0:
             bot.send_message(call.message.chat.id, f"{result_card}", reply_markup=AfterReview_inline_keyb)
@@ -815,7 +796,6 @@ def query_handler(call):
                              reply_markup=Success_reg_inline_keyb)
         else:
             bot.send_message(call.message.chat.id, f"Введите корректные данные для всех полей и сохраните данные.", reply_markup=create_registration_keyb())
-
     if call.data.split(':')[1] == 'txt4':
         user_id = call.from_user.id  # id телеги пользователя
         cursor.execute("SELECT * FROM Clients WHERE telegram_id = ?", (user_id,))  # проверяем, есть ли запись о пользователе в БД
@@ -891,7 +871,6 @@ def query_handler(call):
                              reply_markup=create_admin_review_keyb(review_result_dict))
         else:
             bot.send_message(call.message.chat.id, f"Отзывов нет.", reply_markup=Admin_keyb_lvl2)
-
     bot.answer_callback_query(call.id)  # подтверждаем нажатие
     if call.data.split(':')[0] == "-edit_review":  # если нажата кнопка "Отклонить"
         review_result_dict[int(call.data.split(':')[1][1:])][2] = "NO"
@@ -1007,7 +986,6 @@ def query_handler(call):
                                                      f"успешно изменён на 'NO'")
         time.sleep(3)
         bot.delete_message(call.message.chat.id, msg.message_id)
-
     if call.data.split(':')[1] == "admin_dish_add":
         global result_card_for_admin3
         result_card_for_admin3 = ""
@@ -1101,7 +1079,6 @@ def query_handler(call):
         conn.commit()  # сохраняем изменения в базе данных
 
         bot.send_message(call.message.chat.id, "Новое блюдо добавлено в базу данных", reply_markup=Admin_keyb_lvl2)
-
     if call.data.split(':')[1] == "admin_dish_stop":
         try:
             with conn:
@@ -1149,7 +1126,6 @@ def query_handler(call):
             bot.delete_message(call.message.chat.id, msg_status.message_id)
 
 
-
 # обработка ответа пользователя на вопрос о его отзыве на работу ресторана с последующей запись в БД
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Как вы оцениваете работу ресторана?"])
 def handle_review_answer(message):
@@ -1164,6 +1140,7 @@ def handle_review_answer(message):
                      (review_order, review_dish, client_id, orders_id, dish_id)) # добавьте новую запись в таблицу "Отзывы"
     conn.commit()  # сохраняем изменения в базе данных
     bot.send_message(message.chat.id, "Спасибо за Ваш отзыв!", reply_markup=Main_inline_keyb)
+
 
 # обработка ответа пользователя на вопрос о его отзыве на блюдо с последующей записью в БД
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Понравилось ли Вам данное блюдо?"])
@@ -1190,6 +1167,7 @@ def handle_name_answer(message):
         conn.execute(f"UPDATE Clients SET {field} = ? WHERE telegram_id = ?", (message.text, message.from_user.id))
     conn.commit()
     bot.send_message(message.chat.id, f"Вы успешно изменили {field_dict[field]}.", reply_markup=create_edit_button(profile_edit_data))
+
 
 # обрабатываем ответы пользователя при регистрации на вопросы о его имени пользователя/телефоне/адресе reg_field_dict[reg_field]
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in [f"Введите значение для поля '{reg_field_dict[reg_field]}'.", f"Введите корректные данные для всех полей и сохраните данные."])
@@ -1246,6 +1224,7 @@ def handle_order_answer(message):
                      parse_mode="Markdown", reply_markup=markup_administration)
     conn.execute(f'DELETE FROM ShoppingCart WHERE client_id = {message.chat.id}')
 
+
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Введите telegram id нового администратора"])
 def handler_admin_first_answer(message):
     print("Шляпа1")
@@ -1259,6 +1238,7 @@ def handler_admin_first_answer(message):
     conn.commit()
     bot.send_message(message.chat.id, "Введите имя нового администратора", reply_markup=telebot.types.ForceReply())
 
+
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Введите имя нового администратора"])
 def handler_admin_first_answer(message):
     print(tg_id, "Шляпа2")
@@ -1268,6 +1248,7 @@ def handler_admin_first_answer(message):
     conn.commit()
     bot.send_message(message.chat.id, "Введите фамилию нового администратора", reply_markup=telebot.types.ForceReply())
 
+
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Введите фамилию нового администратора"])
 def handler_admin_last_answer(message):
     last_name = message.text
@@ -1275,6 +1256,7 @@ def handler_admin_last_answer(message):
         conn.execute(f"UPDATE BotAdmins SET last_name = ? WHERE telegram_id = ?", (last_name, tg_id))
     conn.commit()
     bot.send_message(message.chat.id, "Введите номер телефона нового администратора", reply_markup=telebot.types.ForceReply())
+
 
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Введите номер телефона нового администратора"])
 def handler_admin_last_answer(message):
@@ -1284,6 +1266,7 @@ def handler_admin_last_answer(message):
     conn.commit()
     bot.send_message(message.chat.id, 'Укажите должность администратора', reply_markup=telebot.types.ForceReply())
 
+
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ['Укажите должность администратора'])
 def handler_admin_last_answer(message):
     position = message.text
@@ -1291,6 +1274,7 @@ def handler_admin_last_answer(message):
         conn.execute(f"UPDATE BotAdmins SET position = ? WHERE telegram_id = ?", (position, tg_id))
     conn.commit()
     bot.send_message(message.chat.id, "Админиcтратор успешно добавлен ", reply_markup=Admin_keyb_lvl1)
+
 
 question_list = [v[2] for k, v in default_dict_add_dish.items()]
 print(question_list[:6])
@@ -1308,7 +1292,6 @@ def handler_admin_last_answer(message):
 
 @bot.message_handler(content_types=['text', 'photo'], func=lambda message: message.reply_to_message and message.reply_to_message.text == "Пришлите фотографию блюда")
 def handle_photo_and_text(message):
-
     if message.text:  # если сообщение содержит текст
         bot.reply_to(message, 'Пришлите фотографию блюда', reply_markup=telebot.types.ForceReply())  # отправляем ответ пользователю
     elif message.photo:  # если сообщение содержит фотографию
@@ -1332,13 +1315,6 @@ def handle_photo_and_text(message):
         msg1 = bot.reply_to(message, 'Фото успешно сохранено!')  # отправляем ответ пользователю
         time.sleep(3)
         bot.delete_message(message.chat.id, msg1.message_id)
-        # msg = bot.send_message(message.chat.id, f"ФОТО добавлено")
-        # time.sleep(3)
-        # bot.delete_message(message.chat.id, msg.message_id)
-
-
-
-
 
 
 print("Ready")
