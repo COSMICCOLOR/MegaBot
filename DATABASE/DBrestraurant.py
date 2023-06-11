@@ -156,6 +156,14 @@ with con:
                 """)
 
 
+    try:
+        con.execute("ALTER TABLE ReviewDish ADD COLUMN rating FLOAT")
+    except sl.OperationalError as e:
+        if 'duplicate column name' in str(e):
+            pass  # игнорировать ошибку
+        else:
+            raise  # повторно выбросить исключение
+
 clients = "INSERT OR IGNORE INTO Clients (name, phone_number, delivery_adress) values(?, ?, ?)"
 # INSERT OR IGNORE - модификатор для уникальных значений
 with con:

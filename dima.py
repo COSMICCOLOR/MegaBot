@@ -1,10 +1,8 @@
 import telebot
-from telebot import types
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from telebot.types import InputMediaPhoto
 import sqlite3
 import os
-import array, gspread, requests, subprocess, datetime, uuid
 import datetime as DT
 import time
 import json
@@ -54,7 +52,6 @@ try:
     with conn:
         global client_id
         clients_telegram_id = [i[4] for i in conn.execute(f"SELECT * FROM Clients")]
-        print("айди телеги юзеров", clients_telegram_id)
 except Exception as e:
     print(e)
 
@@ -62,17 +59,11 @@ try:
     with conn:
         orders_telegram_id = [i[5] for i in conn.execute(f"SELECT * FROM Orders")]  # telegram id юзеров, сделавших заказ
         orders_datetime = [i[4] for i in conn.execute(f"SELECT * FROM Orders")]
-        print(type(orders_telegram_id[0]), orders_telegram_id)
 except Exception as e:
     print(e)
 
 try:
     with conn:
-        # data = conn.execute("SELECT * FROM Dish")
-        # print(data.fetchall())
-        # cursor = conn.cursor()
-        # cursor.execute(f"SELECT * FROM Dish")
-        # data2 = cursor.fetchall()  # fetchone
         dish_names = [i[1] for i in conn.execute(f"SELECT * FROM Dish WHERE is_stop = 'В продаже'")]
         dish_cat_ids = [str(i[11]) for i in conn.execute(f"SELECT * FROM Dish WHERE is_stop = 'В продаже'")]
         dish_ids = [str(i[0]) for i in conn.execute(f"SELECT * FROM Dish")]
@@ -86,29 +77,22 @@ except Exception as e:
 try:
     with conn:
         data = conn.execute("SELECT * FROM Reviews")
-        print(data.fetchall())
         review_order = [i[1] for i in conn.execute(f"SELECT * FROM Reviews WHERE accept = 'YES'")]
         review_dish = [i[2] for i in conn.execute(f"SELECT * FROM Reviews")]
         client_id = [i[3] for i in conn.execute(f"SELECT * FROM Reviews WHERE accept = 'YES'")]
         orders_id = [i[4] for i in conn.execute(f"SELECT * FROM Reviews")]
         review_id = [i[0] for i in conn.execute(f"SELECT * FROM Reviews")]
-        print("qqqqqqqqq", review_order, client_id)
         dish_id = [str(i[5]) for i in conn.execute(f"SELECT * FROM Reviews")]
         review_order_dict = dict(zip(review_order, client_id))  # можно корректировать индексами количество выводимых отзывов
-        print(review_order_dict)
         review_dish_dict = dict(zip(dish_id, review_dish))
-        print(review_dish_dict)
         client_name = [i[1] for i in conn.execute(f"SELECT * FROM Clients")]
         client_id2 = [i[0] for i in conn.execute(f"SELECT * FROM Clients")]
         client_dict = dict(zip(client_id2, client_name))
-        print(client_dict)
         cursor = conn.cursor()
         cursor.execute(f"SELECT * FROM Reviews")
         data_feedback = cursor.fetchall()  # fetchone
         feedback = [i[1] for i in conn.execute(f"SELECT * FROM Reviews")]
         cursor.execute("SELECT * FROM Clients WHERE id = 4")
-        gg = cursor.fetchall()
-        print(gg)
 except Exception as e:
     print(e)
 
@@ -273,6 +257,19 @@ def create_admin_stop_dish_keyboard(dct):  # функция для создан�
     AdminDelDish_inline_keyb.add(InlineKeyboardButton("Админка", callback_data="admin_lvl2:admin_panel"))
     return AdminDelDish_inline_keyb
 
+global star_rating_dish_dict
+star_rating_dish_dict = {1: ["*", ""],
+                         2: ["**", ""],
+                         3: ["***", ""],
+                         4: ["****", ""],
+                         5: ["*****", ""]}
+def create_star_rating_dish_keyboard(dct):  # функция для создания клавиатуры для оценки блюда, принимает словарь
+    star_rating_dish_keyboard = InlineKeyboardMarkup(row_width=5)
+    for key, value in star_rating_dish_dict.items():
+        star_rating_dish_keyboard.add(InlineKeyboardButton(f"{value[0]} {value[1]}", callback_data=f"star_the_dish:star{key}"))
+    star_rating_dish_keyboard.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
+    return star_rating_dish_keyboard
+
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -360,8 +357,20 @@ def query_handler(call):
         current_dish_id = dish_all_dict[call.data.split(':')[0]][8]
         dish_ids.append(dish_all_dict[call.data.split(':')[0]][8])  # айди бюлюда в карточке
         dish_names = dish_all_dict[call.data.split(':')[0]][0]
+        client_id_rating = [i[2] for i in conn.execute(f"SELECT * FROM ReviewDish WHERE dish_id = {current_dish_id}")]
+        rating = [i[6] for i in conn.execute(f"SELECT * FROM ReviewDish WHERE dish_id = {current_dish_id}")]
+        rating_dict = {}  # делаем словарь чтобы исключить дублирующие оценки
+        for key, value1 in zip(client_id_rating, rating):
+            rating_dict[key] = [value1]
+        print(rating)
+        print(rating_dict)
+        if len(rating) < 10:
+            avg_rating = 4.5
+        else:
+            avg_rating = sum(rating) / len(rating)
         global result_dish  # формируем карточку блюда и отправляем юзеру с клавиатурой для заказа и добавления в корзину
         result_dish = f"{call.data.split(':')[0]}\n" \
+                      f"Рейтинг:  {avg_rating}\n" \
                       f"Описание: {dish_all_dict[call.data.split(':')[0]][1]}\n" \
                       f"Цена: {dish_all_dict[call.data.split(':')[0]][3]} BYN (1 шт.)\n" \
                       f"Вес: {dish_all_dict[call.data.split(':')[0]][5]} {dish_all_dict[call.data.split(':')[0]][6]}\n" \
@@ -1125,6 +1134,35 @@ def query_handler(call):
             time.sleep(3)
             bot.delete_message(call.message.chat.id, msg_status.message_id)
 
+    if call.data.split(':')[0] == "rate_the_dish":  # если нажата кнопка "Оценить блюдо"
+        global star_id_dish
+        star_id_dish = int(call.data.split(':')[1][4:])
+        print(star_id_dish)
+        bot.send_message(call.message.chat.id, "Поставьте оценку блюду", reply_markup=create_star_rating_dish_keyboard(star_rating_dish_dict))
+    if call.data.split(':')[0] == "star_the_dish":  # если нажата кнопка "Оценить блюдо"
+
+        for key, value in star_rating_dish_dict.items():
+            value[1] = ""
+        star_rating_dish_dict[int(call.data.split(':')[1][4:])][1] = "\u2705"
+        print(star_rating_dish_dict[int(call.data.split(':')[1][4:])][1])
+        star_dish_name = [i[1] for i in conn.execute(f"SELECT * FROM Dish WHERE id = {star_id_dish}")][0]
+        star_client_id = [i[0] for i in conn.execute(f"SELECT id FROM Clients WHERE telegram_id = {call.message.chat.id}")][0]
+        try:
+            with conn:
+                conn.execute(f"UPDATE ReviewDish SET rating = ? WHERE dish_id = ? AND client_id = ?",
+                             (float(call.data.split(':')[1][4:]), star_id_dish, star_client_id))
+            conn.commit()
+        except Exception as e:
+            print(e)
+        bot.edit_message_text(f"Поставьте оценку блюду", call.message.chat.id, call.message.message_id,
+                              reply_markup=create_star_rating_dish_keyboard(star_rating_dish_dict))  # обновляем сообщение с клавиатурой
+        msg_rating = bot.send_message(call.message.chat.id, f"Оценка для блюда {star_dish_name} изменена")
+        time.sleep(3)
+        bot.delete_message(call.message.chat.id, msg_rating.message_id)
+
+
+
+
 
 # обработка ответа пользователя на вопрос о его отзыве на работу ресторана с последующей запись в БД
 @bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.text in ["Как вы оцениваете работу ресторана?"])
@@ -1154,7 +1192,13 @@ def handle_dish_review_answer(message):
         conn.execute("INSERT INTO ReviewDish (review_dish, client_id, dish_id) VALUES (?, ?, ?)",
                      (review_dish, client_id, dish_id)) # добавьте новую запись в таблицу "Отзывы"
     conn.commit()  # сохраняем изменения в базе данных
-    bot.send_message(message.chat.id, "Спасибо за Ваш отзыв!", reply_markup=Main_inline_keyb)
+    rating_dish_keyboard = InlineKeyboardMarkup()
+    rating_dish_keyboard.add(InlineKeyboardButton("Поставить оценку блюду", callback_data=f"rate_the_dish:rate{dish_id}"))
+    rating_dish_keyboard.add(InlineKeyboardButton("Вернуться в меню", callback_data="menu:b1"))
+    bot.send_message(message.chat.id, "Спасибо за Ваш отзыв!", reply_markup=rating_dish_keyboard)
+
+
+
 
 
 # обрабатываем ответ пользователя на вопрос о его имени пользователя/телефоне/адресе {field} при их изменении
